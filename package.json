@@ -11,7 +11,12 @@
     "build": "cd client && npm run build && cd ../server && npm run build",
     "start": "cd server && npm start"
   },
-  "keywords": ["neighborhood", "community", "help", "neighbors"],
+  "keywords": [
+    "neighborhood",
+    "community",
+    "help",
+    "neighbors"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
