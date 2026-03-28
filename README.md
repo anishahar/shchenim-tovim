@@ -53,16 +53,17 @@ shchenim-tovim/
 
 ```bash
 # Install all dependencies (root, client, and server)
-npm run install:all
+cd client && npm install
+cd ../server && npm install
+cd ..
+npm install
 ```
 
 ### 2. Database Setup
 
 ```bash
-# Create PostgreSQL database
-createdb shchenim_tovim
 
-# Or using psql
+# using psql
 psql -U postgres
 CREATE DATABASE shchenim_tovim;
 \q
@@ -72,9 +73,8 @@ CREATE DATABASE shchenim_tovim;
 
 ```bash
 # Copy example env files
-cp .env.example .env
-cp client/.env.example client/.env
-cp server/.env.example server/.env
+copy client/.env.example client/.env
+copy server/.env.example server/.env
 
 # Edit .env files with your actual values
 # - Update DATABASE_URL with your PostgreSQL credentials
