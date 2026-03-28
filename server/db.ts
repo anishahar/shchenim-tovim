@@ -14,9 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   name VARCHAR(255) NOT NULL,
-  role VARCHAR(50) DEFAULT 'user',
+  role VARCHAR(50) DEFAULT 'resident',
   avatar_url TEXT,
   phone VARCHAR(50),
+  is_blocked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
