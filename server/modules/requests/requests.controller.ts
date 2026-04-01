@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import {pool} from '../../db.js';
+import { pool } from '../../db.js';
 
 /**
  * FEATURE 1: HELP REQUESTS CONTROLLER
@@ -48,6 +48,8 @@ class RequestController {
                 urgency: row.urgency,
                 status: row.status,
                 location_text: row.location_text,
+                latitude: row.latitude,    // Added: for map integration
+                longitude: row.longitude,  // Added: for map integration
                 image_url: row.image_url,
                 created_at: row.created_at,
                 user: {
@@ -71,13 +73,14 @@ class RequestController {
     // POST /api/requests - Create a new help request
     newRequest = async (req: any, res: Response) => {
         try {
-            const { title, description, category, urgency, location_text, image_url } = req.body;
+            // Added latitude and longitude to destructuring
+            const { title, description, category, urgency, location_text, image_url, latitude, longitude } = req.body;
             const userId = req.user.id; // Populated by authenticateToken middleware
 
             const result = await pool.query(
-                `INSERT INTO requests (user_id, title, description, category, urgency, location_text, image_url, status) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, 'open') RETURNING id, title, status`,
-                [userId, title, description, category, urgency, location_text, image_url]
+                `INSERT INTO requests (user_id, title, description, category, urgency, location_text, image_url, latitude, longitude, status) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open') RETURNING id, title, status`,
+                [userId, title, description, category, urgency, location_text, image_url, latitude, longitude]
             );
 
             return res.status(201).json(result.rows[0]);
@@ -114,7 +117,7 @@ class RequestController {
     editRequest = async (req: any, res: Response) => {
         try {
             const { id } = req.params;
-            const { status, title, description, category, urgency } = req.body;
+            const { status, title, description, category, urgency, latitude, longitude } = req.body;
             const userId = req.user.id;
 
             // Check if request exists and belongs to the user
@@ -128,9 +131,11 @@ class RequestController {
                      title = COALESCE($2, title), 
                      description = COALESCE($3, description), 
                      category = COALESCE($4, category), 
-                     urgency = COALESCE($5, urgency) 
-                 WHERE id = $6`,
-                [status, title, description, category, urgency, id]
+                     urgency = COALESCE($5, urgency),
+                     latitude = COALESCE($6, latitude),
+                     longitude = COALESCE($7, longitude)
+                 WHERE id = $8`,
+                [status, title, description, category, urgency, latitude, longitude, id]
             );
 
             return res.json({ message: 'Request updated successfully' });
