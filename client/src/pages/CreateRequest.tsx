@@ -6,7 +6,8 @@ type CreateRequestData = {
   description: string;
   category: string;
   urgency: string;
-  location_text: string;
+  latitude: number | null;
+  longitude: number | null;
   image_url: string | null;
 };
 
@@ -15,8 +16,26 @@ export default function CreateRequest() {
   const [description, setDescription] = useState<string>('');
   const [category, setCategory] = useState<string>('');
   const [urgency, setUrgency] = useState<string>('');
-  const [locationText, setLocationText] = useState<string>('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [image, setImage] = useState<string>('');
+
+  navigator.geolocation.getCurrentPosition(
+  (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const latNum = Number(lat);
+      const lngNum = Number(lng);
+
+       setLatitude(latNum);
+       setLongitude(lngNum);
+       console.log('Current location:', latNum, lngNum);
+  },
+  (error) => {
+    console.error('Location error:', error);
+  },
+  { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+);
 
   //Submit handler - to be implemented
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,11 +46,12 @@ export default function CreateRequest() {
       description,
       category,
       urgency,
-      location_text: locationText,
+      latitude,
+      longitude,
       image_url: image || null,
     };
 
-    /*console.log('Submitting request:', dataToSend);*/
+    console.log('Submitting request:', dataToSend);
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -129,7 +149,7 @@ export default function CreateRequest() {
               </div>
             </div>
 
-            <div>
+            {/*<div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                 מיקום
               </label>
@@ -142,7 +162,7 @@ export default function CreateRequest() {
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-            </div>
+            </div>*/}
 
             <div>
               <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
