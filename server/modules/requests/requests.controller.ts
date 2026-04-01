@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import pool from '../../db.js';
+import {pool} from '../../db.js';
 
 /**
  * FEATURE 1: HELP REQUESTS CONTROLLER
