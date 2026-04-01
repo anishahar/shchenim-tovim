@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import api from '../api';
 
 type CreateRequestData = {
   title: string;
@@ -30,7 +31,21 @@ export default function CreateRequest() {
       image_url: image || null,
     };
 
-    console.log('Submitting request:', dataToSend);
+    /*console.log('Submitting request:', dataToSend);*/
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('אנא התחבר כדי ליצור בקשה');
+      return;
+    }
+
+    try {
+      await api.post('/requests', dataToSend);
+      alert('הבקשה נוצרה בהצלחה!');
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'אירעה שגיאה ביצירת הבקשה';
+      alert(`שגיאה: ${errorMessage}`);
+    }
   };
 
   return (
