@@ -9,17 +9,20 @@ type CreateRequestData = {
   latitude: number | null;
   longitude: number | null;
   image_url: string | null;
+  location_text: string;
 };
 
 export default function CreateRequest() {
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
+  const [locationText, setLocationText] = useState<string>('');
   const [category, setCategory] = useState<string>('');
   const [urgency, setUrgency] = useState<string>('');
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [image, setImage] = useState<string>('');
 
+  //Get user's current location on component mount
   navigator.geolocation.getCurrentPosition(
   (position) => {
       const lat = position.coords.latitude;
@@ -49,6 +52,7 @@ export default function CreateRequest() {
       latitude,
       longitude,
       image_url: image || null,
+      location_text: locationText,
     };
 
     console.log('Submitting request:', dataToSend);
@@ -60,7 +64,9 @@ export default function CreateRequest() {
     }
 
     try {
-      await api.post('/requests', dataToSend);
+      const response = await api.post('/requests', dataToSend);
+      //Note: the requests.controller.ts specifies the response as RETURNING id, title, status;
+      console.log('Response from backend:', response.data);
       alert('הבקשה נוצרה בהצלחה!');
     } catch (error: any) {
       const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'אירעה שגיאה ביצירת הבקשה';
@@ -149,7 +155,7 @@ export default function CreateRequest() {
               </div>
             </div>
 
-            {/*<div>
+            <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
                 מיקום
               </label>
@@ -162,7 +168,7 @@ export default function CreateRequest() {
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
-            </div>*/}
+            </div>
 
             <div>
               <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
