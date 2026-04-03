@@ -1,0 +1,171 @@
+﻿שכנים טובים — חלוקת משימות
+
+
+לפי תפקיד | 5 חברי צוות
+
+
+מקרא סוגי משימות
+
+
+סוג
+	משמעות
+	שלד
+	חלק מהתשתית הבסיסית שחייבת להיות מוכנה לפני שמתחילים בפיצ'רים
+	פיצ'ר X
+	אחד מ-4 הפיצ'רים הראשיים של הפרויקט
+	משימה
+	משימה עצמאית מחוץ ל-4 הפיצ'רים הראשיים
+	QA
+	בדיקות, ניהול, Deploy
+	
+
+Full Stack Lead + QA
+
+
+סוג
+	משימה
+	שלד
+	הקמת GitHub repo, folder structure, .gitignore, .env.example
+	שלד
+	schema.sql — יצירת כל הטבלאות ב-PostgreSQL
+	שלד
+	server/index.js — Express, CORS, Socket.io, חיבור routes
+	שלד
+	middleware: auth.js (JWT), roleGuard.js, errorHandler.js
+	שלד
+	skeleton routes לכל הפיצ'רים (עם TODO)
+	שלד
+	client App.jsx — Router, AuthProvider, SocketProvider
+	שלד
+	api.js — axios instance + interceptor לשליחת token
+	שלד
+	AuthContext + SocketContext + hooks: useAuth, useSocket
+	שלד
+	עמוד הבית — Navbar, Hero, 3 בקשות אחרונות, Footer
+	שלד
+	ProtectedRoute component + עמודי Login/Register (UI בסיסי)
+	שלד
+	הגדרת כל החיבורים: DB, CORS, Cloudinary, Google Maps, Socket
+	QA
+	בדיקות API עם Postman לכל ה-endpoints
+	QA
+	ממשק דשבורד מנהל — צפייה בכל הבקשות + פעולות מנהל
+	QA
+	חסימת משתמשים — UI + middleware בשרת (is_blocked)
+	QA
+	Deploy: Backend ל-Render, Frontend ל-Vercel + env vars
+	QA
+	GitHub Actions — בדיקות אוטומטיות על PR
+	
+
+Frontend Dev A
+
+
+סוג
+	משימה
+	פיצ'ר 1
+	טופס יצירת בקשה: שדות — כותרת, תיאור, קטגוריה, דחיפות, מיקום
+	פיצ'ר 1
+	רשימת בקשות פעילות — כרטיסיות עם פרטים קצרים
+	פיצ'ר 1
+	עמוד פרטי בקשה — פרטים מלאים + כפתור 'אני אעזור'
+	פיצ'ר 1
+	סינון לפי קטגוריה, דחיפות ומרחק + חיפוש חופשי
+	פיצ'ר 2
+	שילוב Google Maps JavaScript API בדף
+	פיצ'ר 2
+	סמנים על המפה לכל בקשה + popup עם פרטים + קישור
+	פיצ'ר 2
+	זיהוי מיקום המשתמש (Geolocation API) + סינון רדיוס
+	משימה
+	UI סגירת בקשה — כפתור 'נפתרה' + trigger לחלון דירוג
+	
+
+Frontend Dev B
+
+
+סוג
+	משימה
+	פיצ'ר 3
+	ממשק צ'אט — חלון הודעות, שדה קלט, כפתור שליחה
+	פיצ'ר 3
+	רשימת שיחות פעילות של המשתמש
+	פיצ'ר 3
+	האזנה לאירועי Socket.io לקבלת הודעות בזמן אמת
+	פיצ'ר 4
+	רשימת הודעות לוח מודעות — כרטיסיות ממוינות לפי תאריך
+	פיצ'ר 4
+	ממשק פרסום הודעה (גלוי רק לועד בית / מנהל אזור)
+	משימה
+	עמוד פרופיל — הצגת שם, תמונה, בקשות שפרסמתי / עזרתי
+	משימה
+	עריכת פרופיל — שם + תמונה (Cloudinary)
+	משימה
+	עיצוב כללי: פלטת צבעים, רכיבי UI (Button, Card, Badge, Modal)
+	משימה
+	Responsive design — מובייל + Desktop, עמוד 404
+	
+
+Backend Dev A
+
+
+סוג
+	משימה
+	פיצ'ר 1
+	POST /requests, GET /requests (עם query params לסינון)
+	פיצ'ר 1
+	GET /requests/:id, PATCH /requests/:id, DELETE /requests/:id
+	פיצ'ר 1
+	Middleware לאימות בעלות על בקשה
+	פיצ'ר 4
+	GET /announcements, POST /announcements, DELETE /announcements/:id
+	פיצ'ר 4
+	Middleware לבדיקת תפקיד לפני פרסום הודעה
+	משימה
+	GET/PATCH /users/:id — פרטי פרופיל ועדכון
+	משימה
+	POST /ratings — שמירת דירוג, GET ממוצע לפי משתמש
+	
+
+Backend Dev B
+
+
+סוג
+	משימה
+	פיצ'ר 2
+	GET /requests/nearby?lat=&lng=&radius= עם חישוב Haversine
+	פיצ'ר 2
+	שמירת lat/lng בטבלת requests + geocoding בסיסי
+	פיצ'ר 3
+	POST /chats, GET /chats, GET /chats/:id/messages
+	פיצ'ר 3
+	Socket.io: join_chat event, send_message — שמירה + emit
+	משימה
+	Cloudinary integration — upload endpoint + רכיב React להעלאה
+	משימה
+	העלאת תמונה לבקשה + לפרופיל דרך אותו רכיב
+	משימה
+	Frontend דירוג — רכיב כוכבים + הצגת ממוצע בכרטיסיית משתמש
+	
+
+סנכרון בין תפקידים — מי עובד עם מי
+
+
+יש 3 זוגות שחייבים לתאם ביניהם לאורך הפרויקט:
+
+
+פיצ'ר
+	מי מסנכרן
+	מה צריך להסכים עליו
+	פיצ'ר 1 — בקשות
+	Frontend Dev A + Backend Dev A
+	מה מחזיר GET /requests, שדות הטופס, מבנה כרטיסייה
+	פיצ'ר 3 — צ'אט
+	Frontend Dev B + Backend Dev B
+	שמות אירועי Socket.io, מבנה הודעה, מה מחזיר GET /chats
+	פיצ'ר 4 — לוח מודעות
+	Frontend Dev B + Backend Dev A
+	מה ה-endpoint מחזיר, מבנה כרטיסיית הודעה
+	שלד — תשתית
+	Full Stack Lead + כולם
+	הכי קריטי — כולם תלויים בשלד. עד שה-AuthContext, API layer ו-DB לא מוכנים אף אחד לא יכול להתחיל
