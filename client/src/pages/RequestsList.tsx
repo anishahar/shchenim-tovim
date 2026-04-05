@@ -34,8 +34,10 @@ export default function RequestsList() {
       .includes(normalizedFilter);
     //Filter based on urgency
   const matchesUrgency = !urgencyFilter || request.urgency === urgencyFilter;
+  //Filter based on category
+  const matchesCategory = !categoryFilter || request.category === categoryFilter;
 
-  return matchesText && matchesUrgency;
+  return matchesText && matchesUrgency && matchesCategory;
 });
 
 
