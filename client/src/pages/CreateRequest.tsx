@@ -172,7 +172,7 @@ export default function CreateRequest() {
             </div>
 
             <div>
-              {/*Image upload with cloundinary*/}
+              {/*Image upload with cloundinary that returns the image URL*/}
               <UploadImage
                       onUploadSuccess={(url) => setImage(url)}
                       onUploadError={(err) => console.error(err)}
