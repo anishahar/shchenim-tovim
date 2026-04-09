@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../api';
 import UploadImage from '../components/UploadImage';
+import { useNavigate } from 'react-router-dom';
 
 type CreateRequestData = {
   title: string;
@@ -19,58 +20,97 @@ export default function CreateRequest() {
   const [locationText, setLocationText] = useState<string>('');
   const [category, setCategory] = useState<string>('');
   const [urgency, setUrgency] = useState<string>('');
-  const [latitude, setLatitude] = useState<number | null>(null);
-  const [longitude, setLongitude] = useState<number | null>(null);
   const [image, setImage] = useState<string>('');
+  const [uploadResetKey, setUploadResetKey] = useState(0); //used to reset the UploadImage component by changing its key
+  //const [isSubmitting, setIsSubmitting] = useState(false);
 
-  //Get user's current location on component mount
-  navigator.geolocation.getCurrentPosition(
-  (position) => {
-      const lat = position.coords.latitude;
-      const lng = position.coords.longitude;
-      const latNum = Number(lat);
-      const lngNum = Number(lng);
+  const navigate = useNavigate();
 
-       setLatitude(latNum);
-       setLongitude(lngNum);
-       console.log('Current location:', latNum, lngNum);
-  },
-  (error) => {
-    console.error('Location error:', error);
-  },
-  { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-);
+  //Geocoding function using Google Maps API
+  const geocodeLocation = async (locationText: string): Promise<{ lat: number; lng: number }> => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
+    if (!apiKey) 
+      throw new Error('Missing Google Maps API key');
+
+    const cleaned = locationText.trim();
+    if (!cleaned) {
+      throw new Error('יש להזין כתובת');
+    }
+
+    const query = cleaned.includes('ישראל') ? cleaned : `${cleaned}, ישראל`;
+
+    const params = new URLSearchParams({
+      address: query,
+      key: apiKey,
+      language: 'he',
+      region: 'IL',
+    });
+
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    console.log('Geocode result:', {
+      status: data.status,
+      error_message: data.error_message,
+      query,
+    });
+
+    if (data.status === 'OK' && data.results?.length) {
+      const first = data.results[0];
+      return {
+        lat: first.geometry.location.lat,
+        lng: first.geometry.location.lng,
+      };
+    }
+
+    if (data.status === 'ZERO_RESULTS') {
+      throw new Error('כתובת לא נמצאה');
+    }
+
+    throw new Error(
+      `Geocoding failed: ${data.status}${data.error_message ? ` - ${data.error_message}` : ''}`
+    );
+  };
 
   //Submit handler - to be implemented
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const dataToSend: CreateRequestData = {
-      title,
-      description,
-      category,
-      urgency,
-      latitude,
-      longitude,
-      image_url: image || null,
-      location_text: locationText,
-    };
-
-    console.log('Submitting request:', dataToSend);
 
     const token = localStorage.getItem('token');
     if (!token) {
       alert('אנא התחבר כדי ליצור בקשה');
       return;
     }
-
+    
+       
     try {
+      //Geocode the location text to get lat and lng
+      const coords = await geocodeLocation(locationText);
+      console.log('Geocoded coordinates:', coords);
+      //build data 
+      const dataToSend: CreateRequestData = {
+      title,
+      description,
+      category,
+      urgency,
+      latitude: coords.lat,
+      longitude: coords.lng,
+      image_url: image || null,
+      location_text: locationText,
+    };
+    console.log('Submitting request:', dataToSend);
+      //sends data 
       const response = await api.post('/requests', dataToSend);
       //Note: the requests.controller.ts specifies the response as RETURNING id, title, status;
       console.log('Response from backend:', response.data);
       alert('הבקשה נוצרה בהצלחה!');
+      //navigate to the request list page
+      //alert is blocking, so it will only navigate after the user clicks "OK"
+      navigate('/requests');
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || 'אירעה שגיאה ביצירת הבקשה';
+      console.error(error)
+      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || error?.message || "אירעה שגיאה ביצירת הבקשה";
       alert(`שגיאה: ${errorMessage}`);
     }
   };
@@ -171,12 +211,25 @@ export default function CreateRequest() {
               />
             </div>
 
-            <div>
+            <div className="flex items-start gap-2">
               {/*Image upload with cloundinary that returns the image URL*/}
-              <UploadImage
-                      onUploadSuccess={(url) => setImage(url)}
-                      onUploadError={(err) => console.error(err)}
-                  />
+              <div>
+                <UploadImage
+                  key={uploadResetKey}
+                  onUploadSuccess={(url) => setImage(url)}
+                  onUploadError={(err) => console.error(err)}
+                />
+              </div>
+              <button
+                type="button"
+                className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
+                onClick={() => {
+                  setImage('');
+                  setUploadResetKey((prev) => prev + 1); {/*react ahhhhh trick*/}
+                }}
+              >
+                מחק
+              </button>
             </div>
 
             <button
