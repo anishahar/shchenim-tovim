@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api";
+// import {Request} from "@typesLib"
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -43,13 +44,12 @@ export default function RequestDetail() {
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold text-blue-700">{request.title}</h1>
-            <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${
-              request.urgency === 'high' ? 'bg-red-100 text-red-700' :
+            <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${request.urgency === 'high' ? 'bg-red-100 text-red-700' :
               request.urgency === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-green-100 text-green-700'
-            }`}>
+                'bg-green-100 text-green-700'
+              }`}>
               {request.urgency === 'high' ? 'דחיפות גבוהה' :
-               request.urgency === 'medium' ? 'דחיפות בינונית' : 'דחיפות נמוכה'}
+                request.urgency === 'medium' ? 'דחיפות בינונית' : 'דחיפות נמוכה'}
             </span>
           </div>
           <p className="text-gray-600 text-sm leading-relaxed mb-6">{request.description}</p>

@@ -1,11 +1,12 @@
-import { requestsService } from "modules/requests/requests.service.js";
+import { requestsService } from "../requests/requests.service.js";
 import { chatsRepository } from "./chats.repository.js";
 
 
 class ChatsService {
     getChats = async (userId: number) => {
         try {
-            return await chatsRepository.getChats(userId);
+            const chats = await chatsRepository.getChats(userId);
+            return chats;
         } catch (error) {
             console.error('error in getChats:', error, 'layer: service');
             throw error;

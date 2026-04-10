@@ -1,4 +1,4 @@
-import { pool } from "db.js";
+import { pool } from "../../db.js";
 import { GET_REQUESTER_ID } from "./requests.db.js";
 
 

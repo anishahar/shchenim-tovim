@@ -1,14 +1,14 @@
 import { pool } from "../../db.js";
 import { GET_USER_CHATS_INFO, NEW_CHAT } from "./chats.db.js";
-// import { Chat } from "@types";
+import { Chat } from "@typesLib";
 
 
 class ChatsRepository {
     getChats = async (userId: number) => {
-        // const result = await pool.query <  Chat[] > (
-        //     GET_USER_CHATS_INFO, [userId]
-        // );
-        // return result.rows[0];
+        const result = await pool.query<Chat[]>(
+            GET_USER_CHATS_INFO, [userId]
+        );
+        return result.rows[0];
     }
 
     newChat = async (requestId: number | null, user1Id: number, user2Id: number) => {
