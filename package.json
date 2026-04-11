@@ -4,11 +4,12 @@
   "description": "Good Neighbors - Neighborhood help platform",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "concurrently --names \"LIB,SERVER,CLIENT\" --prefix-colors \"blue,green,magenta\" \"npm run dev:lib\" \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
+    "dev:lib": "cd lib && npm run dev",
     "install:all": "npm install && cd client && npm install && cd ../server && npm install && cd ..",
-    "build": "cd client && npm run build && cd ../server && npm run build",
+    "build": " cd lib && npm run build && cd ../client && npm run build && cd ../server && npm run build",
     "start": "cd server && npm start"
   },
   "keywords": [
@@ -20,6 +21,11 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/multer": "^2.1.0",
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "cloudinary": "^2.9.0",
+    "multer": "^2.1.1"
   }
 }

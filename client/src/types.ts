@@ -27,11 +27,12 @@ export interface Request {
 
 export interface Chat {
   id: number;
-  requestId: number;
-  requesterId: number;
-  helperId: number;
+  request: Pick<Request, 'id' | 'title' | 'imageUrl' | 'status'> | null;
+  otherUser: Pick<User, 'id' | 'name' | 'avatarUrl'>;
   createdAt: Date;
+  updatedAt: Date;
 }
+
 
 export interface Message {
   id: number;
@@ -43,9 +44,8 @@ export interface Message {
 
 export interface Announcement {
   id: number;
-  adminId: number;
   title: string;
   content: string;
+  author: Pick<User, 'id' | 'name'>;
   createdAt: Date;
-  updatedAt: Date;
 }
