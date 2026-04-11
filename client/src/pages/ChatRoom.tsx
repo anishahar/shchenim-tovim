@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Chat, Message } from '../types';
+import type { Chat, Message } from '@typesLib';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -16,9 +16,9 @@ const AVATAR_COLORS = [
 ] as const;
 
 const STATUS_LABELS: Record<NonNullable<Chat['request']>['status'], string> = {
-  open:        'פתוחה',
+  open: 'פתוחה',
   in_progress: 'בטיפול',
-  completed:   'הושלמה',
+  completed: 'הושלמה',
 };
 
 // ─── Mock Data (UI only) ──────────────────────────────────────────────────────
@@ -49,10 +49,10 @@ const MOCK_CHATS: Chat[] = [
 
 const MOCK_MESSAGES: Message[] = [
   { id: 1, chatId: 1, senderId: 301, content: 'היי, אתה פנוי לעזור לי עם קניות?', createdAt: new Date('2026-04-04T14:10:00') },
-  { id: 2, chatId: 1, senderId: 999, content: 'כן, בכיף. מתי נוח לך?',              createdAt: new Date('2026-04-04T14:15:00') },
-  { id: 3, chatId: 1, senderId: 301, content: 'עוד שעה בערך, זה מתאים?',            createdAt: new Date('2026-04-04T14:20:00') },
-  { id: 4, chatId: 2, senderId: 302, content: 'צריך איסוף תרופות מהסופר-פארם.',     createdAt: new Date('2026-04-04T12:20:00') },
-  { id: 5, chatId: 2, senderId: 999, content: 'סבבה, אני בודק מתי אני יכול.',       createdAt: new Date('2026-04-04T12:28:00') },
+  { id: 2, chatId: 1, senderId: 999, content: 'כן, בכיף. מתי נוח לך?', createdAt: new Date('2026-04-04T14:15:00') },
+  { id: 3, chatId: 1, senderId: 301, content: 'עוד שעה בערך, זה מתאים?', createdAt: new Date('2026-04-04T14:20:00') },
+  { id: 4, chatId: 2, senderId: 302, content: 'צריך איסוף תרופות מהסופר-פארם.', createdAt: new Date('2026-04-04T12:20:00') },
+  { id: 5, chatId: 2, senderId: 999, content: 'סבבה, אני בודק מתי אני יכול.', createdAt: new Date('2026-04-04T12:28:00') },
 ];
 
 // ─── Pure Utilities ───────────────────────────────────────────────────────────

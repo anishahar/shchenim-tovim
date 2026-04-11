@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Chat } from '../types';
+import type { Chat } from '@typesLib';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -93,9 +93,9 @@ const STATUS_LABELS: Record<RequestStatus, string> = {
 };
 
 const STATUS_STYLES: Record<RequestStatus, React.CSSProperties> = {
-  open:        { background: 'rgba(218,113,1,0.12)',   color: '#da7101' },
-  in_progress: { background: 'rgba(1,105,111,0.10)',   color: '#01696f' },
-  completed:   { background: 'rgba(67,122,34,0.12)',   color: '#437a22' },
+  open: { background: 'rgba(218,113,1,0.12)', color: '#da7101' },
+  in_progress: { background: 'rgba(1,105,111,0.10)', color: '#01696f' },
+  completed: { background: 'rgba(67,122,34,0.12)', color: '#437a22' },
 };
 
 // ─── Sub-Components ───────────────────────────────────────────────────────────
