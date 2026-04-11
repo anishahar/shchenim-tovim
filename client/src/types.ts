@@ -33,6 +33,7 @@ export interface Chat {
   updatedAt: Date;
 }
 
+
 export interface Message {
   id: number;
   chatId: number;
