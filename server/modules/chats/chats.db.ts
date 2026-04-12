@@ -42,3 +42,9 @@ export const NEW_CHAT = `
     VALUES ($1, $2, $3, NOW()) 
     RETURNING id;
 `;
+
+export const GET_CHAT_MESSAGES = `
+    SELECT id, chat_id as "chatId", sender_id as "senderId", content, created_at as "createdAt"
+    FROM messages
+    WHERE chat_id = $1
+`;

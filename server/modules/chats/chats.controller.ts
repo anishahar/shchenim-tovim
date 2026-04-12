@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { newChatParamsSchema, newRequesrtChatParamsSchema } from './chats.validation.js';
+import { getMessagesSchema, newChatSchema, newRequesrtChatSchema } from './chats.validation.js';
 import { chatsService } from './chats.service.js';
 
 class ChatsController {
@@ -19,11 +19,11 @@ class ChatsController {
     }
 
     newRequestChat = async (req: Request, res: Response) => {
-        const { data, error } = newRequesrtChatParamsSchema.safeParse(req.params)
+        const { data, error } = newRequesrtChatSchema.safeParse(req)
 
         if (error) return res.status(400).json({ errors: error })
 
-        const requestId = data.requestId;
+        const requestId = data.query.requestId;
 
         if (!req.user) return res.status(401);
         const userId = req.user.id;
@@ -40,11 +40,11 @@ class ChatsController {
     }
 
     newChat = async (req: Request, res: Response) => {
-        const { data, error } = newChatParamsSchema.safeParse(req.params)
+        const { data, error } = newChatSchema.safeParse(req)
 
         if (error) return res.status(400).json({ errors: error })
 
-        const otherUserId = data.otherUserId;
+        const otherUserId = data.query.otherUserId;
 
         if (!req.user) return res.status(401);
         const userId = req.user.id;
@@ -60,9 +60,22 @@ class ChatsController {
         }
     }
 
-    // getChatMessages = async (req: Request, res: Response) => {
-    //     // TODO: Get chat messages
-    //     res.status(501).json({ message: 'Not implemented yet' });
-    // }
+    getChatMessages = async (req: Request, res: Response) => {
+        const { data, error } = getMessagesSchema.safeParse(req)
+
+        if (error) return res.status(400).json({ errors: error })
+
+        const chatId = data.params.id;
+
+        try {
+            const messages = await chatsService.getChatMessages(chatId);
+            return res.status(200).json(messages);
+        }
+        catch (error) {
+            console.error('error in getting chat messages:', error);
+            res.status(500).json({ error: 'getting chat messages' });
+
+        }
+    }
 };
 export const chatsController = new ChatsController();
