@@ -75,6 +75,10 @@ export default function CreateRequest() {
 
   //Submit handler - to be implemented
   const handleSubmit = async (e: React.FormEvent) => {
+    /*if(!title || !description || !locationText || !category || !urgency){
+      alert('אנא מלא את כל השדות הנדרשים');
+      return;
+    }*/
     e.preventDefault();
 
     const token = localStorage.getItem('token');
@@ -220,6 +224,7 @@ export default function CreateRequest() {
                   onUploadError={(err) => console.error(err)}
                 />
               </div>
+              {image && (
               <button
                 type="button"
                 className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
@@ -230,6 +235,7 @@ export default function CreateRequest() {
               >
                 מחק
               </button>
+              )}
             </div>
 
             <button
