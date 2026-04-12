@@ -1,14 +1,14 @@
+import { Chat, Message } from "@typesLib";
 import { pool } from "../../db.js";
-import { GET_USER_CHATS_INFO, NEW_CHAT } from "./chats.db.js";
-import { Chat } from "@typesLib";
+import { GET_CHAT_MESSAGES, GET_USER_CHATS_INFO, NEW_CHAT } from "./chats.db.js";
 
 
 class ChatsRepository {
     getChats = async (userId: number) => {
-        const result = await pool.query<Chat[]>(
+        const result = await pool.query<Chat>(
             GET_USER_CHATS_INFO, [userId]
         );
-        return result.rows[0];
+        return result.rows;
     }
 
     newChat = async (requestId: number | null, user1Id: number, user2Id: number) => {
@@ -26,8 +26,18 @@ class ChatsRepository {
         }
     }
 
-    // getChatMessages = async () => {
-    //     // TODO: Get chat messages
-    // }
+    getChatMessages = async (chatId: number) => {
+        try {
+            const result = await pool.query<Message>
+                (
+                    GET_CHAT_MESSAGES, [chatId]
+                );
+
+            return result.rows;
+        } catch (error) {
+            console.error('error in getChatMessages:', error, 'layer: repository');
+            throw error;
+        }
+    }
 };
 export const chatsRepository = new ChatsRepository();
