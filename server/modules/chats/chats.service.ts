@@ -35,8 +35,14 @@ class ChatsService {
         }
     }
 
-    // getChatMessages = async () => {
-    //     // TODO: Get chat messages
-    // }
+    getChatMessages = async (chatId: number) => {
+        try {
+            const messages = await chatsRepository.getChatMessages(chatId);
+            return messages;
+        } catch (error) {
+            console.error('error in getChatMessages:', error, 'layer: service');
+            throw error;
+        }
+    }
 };
 export const chatsService = new ChatsService();
