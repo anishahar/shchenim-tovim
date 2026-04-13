@@ -58,6 +58,28 @@ export default function CreateRequest() {
 
     if (data.status === 'OK' && data.results?.length) {
       const first = data.results[0];
+      //Type of locations allowed
+      const allowedTypes = new Set([
+        'street_address',
+        'premise',
+        'subpremise',
+        'route',
+        'intersection',
+        'establishment',
+        'point_of_interest',
+      ]);
+      //Preven the api from guessing
+      if (first.partial_match) {
+        throw new Error('כתובת לא מדויקת');
+      }
+      //Check for types
+      const hasAllowedType = Array.isArray(first.types)
+        && first.types.some((type: string) => allowedTypes.has(type));
+
+      if (!hasAllowedType) {
+        throw new Error('כתובת לא מדויקת');
+      }
+
       return {
         lat: first.geometry.location.lat,
         lng: first.geometry.location.lng,
