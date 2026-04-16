@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { useNavigate } from "react-router-dom";
+
 
 export default function RequestsList() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -8,6 +11,16 @@ export default function RequestsList() {
   const [textFilter, setTextFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("");
+  //for navigation to request details page on marker click
+  const navigate = useNavigate();
+  //listen to google maps api load
+  const { isLoaded } = useJsApiLoader({
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY, 
+  language: 'he',
+  });
+
+  const mapContainerStyle = { width: '100%', height: '500px' };
+  const center = { lat: 31.117, lng: 35.0818}; // Center of Israel
 
 
   useEffect(() => {
@@ -40,9 +53,22 @@ export default function RequestsList() {
   return matchesText && matchesUrgency && matchesCategory;
 });
 
+//Map only requests with valid coordinates
+const markerRequests = filteredRequests
+  .map((request) => ({
+    id: request.id,
+    title: request.title,
+    lat: Number(request.latitude),
+    lng: Number(request.longitude),
+  }))
+  .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
+
+//console.log("markers count:", markerRequests.length, markerRequests);
+
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4" dir="rtl">
+    <div className="flex gap-6" dir="ltr">
+    <div className="min-h-screen bg-gray-50 py-10 px-4 flex-1" dir="rtl">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
           <h1 className="text-3xl font-bold text-blue-700 text-center mb-8">רשימת בקשות</h1>
@@ -112,8 +138,36 @@ export default function RequestsList() {
               ))}
             </ul>
           )}
+          
         </div>
+        
+      </div>
+      
+    </div>
+
+    <div className="flex-1 sticky top-4 self-start py-10 pr-4">
+      <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
+      {isLoaded ? (
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '70vh', borderRadius: '8px' }}
+          center={center}
+          zoom={8}
+        >
+          {markerRequests.map((request) => (
+            <Marker
+            
+              key={request.id}
+              position={{ lat: request.lat, lng: request.lng }}
+              title={request.title}
+              onClick={() => navigate(`/requests/${request.id}`)}
+              options={{ cursor: 'pointer' }}
+            />
+          ))}
+        </GoogleMap>
+      ) : null}
       </div>
     </div>
+    
+      </div>
   );
 }
