@@ -10,14 +10,25 @@ class RatingController {
     saveRating = async (req: any, res: Response) => {
         try {
             const { rated_user_id, request_id, score } = req.body;
-            const rater_user_id = req.user.id; // From authenticateToken middleware
+            const rater_user_id = req.user.id; // Extracted from authenticateToken middleware
 
-            // Validation: Ensure the score is within the 1-5 range
+            //  Validation: Ensure the score is within the 1-5 range
             if (!score || score < 1 || score > 5) {
                 return res.status(400).json({ error: "Score must be an integer between 1 and 5" });
             }
 
-            // Database query to insert the new rating
+            //  Validation: Prevent users from rating themselves
+            if (Number(rated_user_id) === Number(rater_user_id)) {
+                    return res.status(400).json({ error: "You cannot rate yourself!" });
+            }
+
+            // Validation: Verify that the target user exists in the database
+            const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [rated_user_id]);
+            if (userCheck.rowCount === 0) {
+                return res.status(404).json({ error: "The user you are trying to rate does not exist" });
+            }
+
+            //  Persistence: Insert the new rating into the database
             const query = `
                 INSERT INTO ratings (rated_user_id, rater_user_id, request_id, score)
                 VALUES ($1, $2, $3, $4)
@@ -32,7 +43,7 @@ class RatingController {
             });
 
         } catch (err: any) {
-            // Handle duplicate rating attempt for the same request
+            // Handle unique constraint violation (if a request was already rated)
             if (err.code === '23505') {
                 return res.status(400).json({ error: "This request has already been rated" });
             }
@@ -44,12 +55,13 @@ class RatingController {
 
     /**
      * GET /api/ratings/average/:userId
-     * Calculates and returns the average score and total count for a user.
+     * Calculates and returns the average score and total count for a specific user.
      */
     getUserAverage = async (req: Request, res: Response) => {
         try {
             const { userId } = req.params;
 
+            // Query to calculate average score and total number of ratings
             const query = `
                 SELECT 
                     ROUND(AVG(score), 1) as average_score,
