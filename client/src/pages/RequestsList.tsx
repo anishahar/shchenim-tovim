@@ -11,6 +11,8 @@ export default function RequestsList() {
   const [textFilter, setTextFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("");
+  const [radiusFilter, setRadiusFilter] = useState<number>(0);
+  const [userCoords, setUserCoords] = useState<userCords | null>(null);
   //for navigation to request details page on marker click
   const navigate = useNavigate();
   //listen to google maps api load
@@ -18,6 +20,27 @@ export default function RequestsList() {
   googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY, 
   language: 'he',
   });
+  //Use geolocation api to get user coordinates
+  type userCords = {
+    userLat: number;
+    userLng: number;
+  }
+  //Get user coordinates on component mount only
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserCoords({
+            userLat: position.coords.latitude,
+            userLng: position.coords.longitude,
+          });
+        }
+      );
+      console.log("User coordinates:", userCoords);
+    }
+  }, []);
+
+
 
   const mapContainerStyle = { width: '100%', height: '500px' };
   const center = { lat: 31.117, lng: 35.0818}; // Center of Israel
@@ -35,6 +58,23 @@ export default function RequestsList() {
       });
   }, []);
 
+  //Calculate distance between two coordinates using Haversine formula
+  function toRadians(deg: number) {
+  return (deg * Math.PI) / 180;
+  } 
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth radius in km
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
  //Filter based on text
   const normalizedFilter = textFilter.trim().toLowerCase();
 
@@ -49,8 +89,16 @@ export default function RequestsList() {
   const matchesUrgency = !urgencyFilter || request.urgency === urgencyFilter;
   //Filter based on category
   const matchesCategory = !categoryFilter || request.category === categoryFilter;
+  //Filter based on radius
+  const matchesRadius = !radiusFilter || !userCoords ||            
+  distanceKm(
+    userCoords.userLat, 
+    userCoords.userLng,
+    Number(request.latitude),
+    Number(request.longitude)
+  ) <= radiusFilter; 
 
-  return matchesText && matchesUrgency && matchesCategory;
+  return matchesText && matchesUrgency && matchesCategory && matchesRadius;
 });
 
 //Map only requests with valid coordinates
@@ -79,6 +127,13 @@ const markerRequests = filteredRequests
               value={textFilter}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTextFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            <input
+              type="number"
+              placeholder="רדיוס בקילומטרים"
+              value={radiusFilter > 0 ? radiusFilter : ""} //Show empty when radius is 0
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRadiusFilter(Number(e.target.value))}
+              className="w-full sm:w-48 border border-gray-300 rounded-lg px-3 py-2"
             />
             <select
                 value={urgencyFilter}
@@ -155,7 +210,6 @@ const markerRequests = filteredRequests
         >
           {markerRequests.map((request) => (
             <Marker
-            
               key={request.id}
               position={{ lat: request.lat, lng: request.lng }}
               title={request.title}
