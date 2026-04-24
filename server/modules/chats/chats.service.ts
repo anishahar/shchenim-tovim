@@ -3,12 +3,12 @@ import { chatsRepository } from "./chats.repository.js";
 
 
 class ChatsService {
-    getChats = async (userId: number) => {
+    getUserChats = async (userId: number) => {
         try {
-            const chats = await chatsRepository.getChats(userId);
+            const chats = await chatsRepository.getUserChats(userId);
             return chats;
         } catch (error) {
-            console.error('error in getChats:', error, 'layer: service');
+            console.error('error in getUserChats:', error, 'layer: service');
             throw error;
         }
 
@@ -18,7 +18,7 @@ class ChatsService {
         try {
             const requesterId = await requestsService.getRequesterByRequestId(requestId);
             const { id: chatId } = await chatsRepository.newChat(requestId, helperId, requesterId);
-            return chatId;
+            return { chatId, otherUserId: requesterId };
         } catch (error) {
             console.error('error in newRequestChat:', error, 'layer: service');
             throw error;
@@ -35,12 +35,49 @@ class ChatsService {
         }
     }
 
-    getChatMessages = async (chatId: number) => {
+    getChatMessages = async (chatId: number, userId: number) => {
         try {
+            const isMember = await this.validateUserInExitsingChat(chatId, userId);
+            if (!isMember) {
+                throw new Error("Not a member");
+            };
             const messages = await chatsRepository.getChatMessages(chatId);
             return messages;
         } catch (error) {
             console.error('error in getChatMessages:', error, 'layer: service');
+            throw error;
+        }
+    }
+
+    validateUserInExitsingChat = async (chatId: number, userId: number) => {
+        try {
+            const isMember = await chatsRepository.validateUserInExitsingChat(chatId, userId);
+            return isMember;
+        } catch (error) {
+            console.error('error in validateUserInExitsingChat:', error, 'layer: service');
+            throw error;
+        }
+    }
+
+    sendMessage = async (chatId: number, senderId: number, content: string) => {
+        try {
+            const isMember = await this.validateUserInExitsingChat(chatId, senderId);
+            if (!isMember) {
+                throw new Error("Not a member");
+            };
+
+            const { createdAt } = await chatsRepository.sendMessage(chatId, senderId, content);
+            const sentAt = new Date(createdAt);
+            await chatsRepository.updateChatLastUpdateTime(chatId, sentAt);
+
+            return sentAt;
+        }
+        catch (error) {
+            console.error('sendMessage failed', {
+                chatId,
+                senderId,
+                error,
+            });
             throw error;
         }
     }

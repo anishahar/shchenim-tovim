@@ -17,3 +17,15 @@ export interface Message {
     content: string;
     createdAt: Date;
 }
+
+export type SocketMessage = Pick<Message, 'chatId' | 'content'>
+
+export type FirstMessageInChat = {
+    otherUserId: number;
+    content: string;
+}
+
+export type FirstMessageInRequestChat = {
+    requestId: number;
+    content: string;
+}

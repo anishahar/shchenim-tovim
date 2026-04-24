@@ -1,11 +1,11 @@
-import express from 'express';
-import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import express from 'express';
+import http from 'http';
 import { initializeDatabase } from './db.js';
-import { setupSocket } from './socket.js';
-import routes from './routes.js';
 import { errorHandler } from './middleware.js';
+import routes from './routes.js';
+import { setupSocket } from './socket/socket.js';
 
 dotenv.config();
 
