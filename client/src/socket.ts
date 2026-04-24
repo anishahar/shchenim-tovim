@@ -18,4 +18,10 @@ export const registerSocketEvents = () => {
         console.log("message:", message);
         ///....
     });
+
+    socket.on("bootstrap_error", (err) => {
+        // show message
+    });
+
+    //connect_error?
 }

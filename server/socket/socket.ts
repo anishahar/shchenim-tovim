@@ -31,7 +31,11 @@ export function setupSocket(httpServer: HTTPServer) {
       console.log(`User ${userId} joined ${chats.length} chats`);
     } catch (err) {
       console.error('Failed to bootstrap chats:', err);
-      socket.emit('error', 'bootstrap_error');
+      socket.emit('bootstrap_error', "FAILED_TO_LOAD_CHATS");
+
+      setTimeout(() => {
+        socket.disconnect();
+      }, 1000);
     }
 
     registerChatEvents(io, socket);
