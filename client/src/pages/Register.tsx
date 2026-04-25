@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { registerUser } from '../api';
 import { useAuth } from '../AuthContext';
+import type { UserRole } from '../types';
+import { validateCity, validateCityAndStreet, validateFullAddress } from '../utils/geocoding';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -12,11 +13,17 @@ export default function Register() {
     email: '',
     password: '',
     confirmPassword: '',
+    phone: '',
+    role: 'resident' as UserRole,
+    city: '',
+    street: '',
+    streetNumber: '',
+    apartment: '',
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
   };
@@ -37,14 +44,62 @@ export default function Register() {
       return;
     }
 
+    // Validate phone number
+    if (formData.phone.length < 9) {
+      setError('מספר טלפון לא תקין');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const data = await registerUser(formData.name, formData.email, formData.password);
+      // Step 1: Validate city
+      await validateCity(formData.city);
+
+      // Step 2: Validate street in city
+      await validateCityAndStreet(formData.city, formData.street);
+
+      // Step 3: Validate full address
+      const location = await validateFullAddress(
+        formData.city,
+        formData.street,
+        formData.streetNumber
+      );
+
+      // Compose address_text for backward compatibility
+      const address_text = `${formData.street} ${formData.streetNumber}${
+        formData.apartment ? ', דירה ' + formData.apartment : ''
+      }, ${formData.city}`;
+
+      // Register user (role is always 'resident' by default)
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          phone: formData.phone,
+          city: formData.city,
+          street: formData.street,
+          street_number: formData.streetNumber,
+          apartment: formData.apartment || null,
+          address_text: address_text,
+          latitude: location.lat,
+          longitude: location.lng,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Registration failed');
+      }
+
+      const data = await response.json();
       login(data.token, data.user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'ההרשמה נכשלה. נסה שוב.');
+      setError(err.message || 'שגיאה באימות הכתובת');
     } finally {
       setIsLoading(false);
     }
@@ -85,6 +140,88 @@ export default function Register() {
               value={formData.email}
               onChange={handleChange}
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+              מספר טלפון
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="050-1234567"
+              required
+              minLength={9}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+              עיר *
+            </label>
+            <input
+              type="text"
+              id="city"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-1">
+              רחוב *
+            </label>
+            <input
+              type="text"
+              id="street"
+              name="street"
+              value={formData.street}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="streetNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              מספר בית *
+            </label>
+            <input
+              type="text"
+              id="streetNumber"
+              name="streetNumber"
+              value={formData.streetNumber}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="apartment" className="block text-sm font-medium text-gray-700 mb-1">
+              דירה (אופציונלי)
+            </label>
+            <input
+              type="text"
+              id="apartment"
+              name="apartment"
+              value={formData.apartment}
+              onChange={handleChange}
+              placeholder="אופציונלי"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={isLoading}
             />

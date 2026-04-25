@@ -16,10 +16,23 @@ class AuthRepository {
             throw error;
         }
     }
-    insertResident = async (name: string, email: string, passwordHash: string) => {
+    insertResident = async (
+        name: string,
+        email: string,
+        passwordHash: string,
+        role: string,
+        phone: string,
+        addressText: string,
+        latitude: number,
+        longitude: number,
+        city?: string,
+        street?: string,
+        streetNumber?: string,
+        apartment?: string
+    ) => {
         try {
             const result = await pool.query<{id: number, name: string, email: string, role: string}>(
-                INSERT_USER, [name, email, passwordHash, 'resident']
+                INSERT_USER, [name, email, passwordHash, role, phone, addressText, latitude, longitude, city || null, street || null, streetNumber || null, apartment || null]
             );
 
             return result.rows[0];

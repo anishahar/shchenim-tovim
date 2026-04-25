@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { ExtendedError, Socket } from 'socket.io';
+import { ROLE_HIERARCHY } from '../lib/constants/roles.js';
+import type { UserRole } from '../lib/types/user.js';
 
 // Extend Express Request type
 declare global {
@@ -33,6 +35,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
   }
 }
 
+// Socket.IO authentication middleware
 export function socketAuthMiddleware(socket: Socket, next: (err?: ExtendedError | undefined) => void) {
   try {
     const token = socket.handshake.auth.token;
@@ -51,7 +54,12 @@ export function socketAuthMiddleware(socket: Socket, next: (err?: ExtendedError 
   }
 }
 
-// Role-based authorization middleware
+// Check if user has specific role or higher in hierarchy
+export function hasRoleOrHigher(userRole: UserRole, requiredRole: UserRole): boolean {
+  return ROLE_HIERARCHY[userRole] >= ROLE_HIERARCHY[requiredRole];
+}
+
+// Role-based authorization middleware (exact role match)
 export function requireRole(role: string) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
@@ -60,6 +68,23 @@ export function requireRole(role: string) {
 
     if (req.user.role !== role) {
       return res.status(403).json({ error: `${role} access required` });
+    }
+
+    next();
+  };
+}
+
+// Middleware: require minimum role level (hierarchical)
+export function requireMinRole(minRole: UserRole) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    if (!hasRoleOrHigher(req.user.role as UserRole, minRole)) {
+      return res.status(403).json({
+        error: `${minRole} access or higher required`
+      });
     }
 
     next();

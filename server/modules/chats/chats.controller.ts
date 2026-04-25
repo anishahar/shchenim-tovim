@@ -64,7 +64,6 @@ class ChatsController {
         const { data, error } = getMessagesSchema.safeParse(req)
 
         if (error) return res.status(400).json({ errors: error })
-
         const chatId = data.params.id;
 
         if (!req.user) return res.status(401);

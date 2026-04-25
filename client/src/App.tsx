@@ -22,10 +22,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
-// Admin Route wrapper
+// Admin Route wrapper (area manager only)
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  return user?.role === 'admin' ? <>{children}</> : <Navigate to="/" replace />;
+  return user?.role === 'area_manager' ? <>{children}</> : <Navigate to="/" replace />;
 }
 
 function App() {
