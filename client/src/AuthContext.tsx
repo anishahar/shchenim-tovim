@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { socket } from './socket';
 import { User } from './types';
 
 interface AuthContextType {
@@ -34,6 +35,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!token) {
+      socket.disconnect();
+      return;
+    }
+
+    socket.auth = { token };
+
+    socket.connect();
+    // registerSocketEvents();
+
+    return () => {
+      socket.off(); // check if its really needed
+    };
+  }, [token]);
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);

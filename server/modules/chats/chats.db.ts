@@ -9,15 +9,15 @@ export const GET_USER_CHATS_INFO = `
     json_build_object(
         'id', other_user.id,
         'name', other_user.name,
-        'avatarUrl', other_user.avatarUrl
+        'avatarUrl', other_user.avatar_url
     ) as "otherUser",
 
-    -- request (יכול להיות null)
+    -- request 
     CASE 
         WHEN requests.id IS NOT NULL THEN json_build_object(
         'id', requests.id,
         'title', requests.title,
-        'imageUrl', requests.imageUrl,
+        'imageUrl', requests.image_url,
         'status', requests.status
     )
     ELSE NULL
@@ -25,7 +25,7 @@ export const GET_USER_CHATS_INFO = `
 
     FROM chats
     LEFT JOIN requests 
-        ON chats."requestId" = requests.id
+        ON chats.request_id = requests.id
 
     JOIN users as other_user
     ON other_user.id = CASE 
@@ -34,7 +34,7 @@ export const GET_USER_CHATS_INFO = `
     END
 
     WHERE 
-        $1 IN (chats.user1_id, chats.user2_id);
+        chats.user1_id = $1 OR chats.user2_id = $1;
 `;
 
 export const NEW_CHAT = `
@@ -48,3 +48,23 @@ export const GET_CHAT_MESSAGES = `
     FROM messages
     WHERE chat_id = $1
 `;
+
+export const IS_USER_MEMBER_IN_CHAT = `
+    SELECT EXISTS (
+    SELECT 1
+    FROM chats
+    WHERE chat_id = $1
+      AND (user1_id = $2 OR user2_id = $2)
+)`;
+
+export const SEND_MESSAGE = `
+    INSERT INTO messages (chat_id, sender_id, content)
+    VALUES ($1, $2, $3) 
+    RETURNING created_at as "createdAt";
+)`;
+
+export const UPDATE_CHAT_TIMESTAMP = `
+    UPDATE chats
+    SET updated_at = $2 
+    WHERE id = $1;
+)`;

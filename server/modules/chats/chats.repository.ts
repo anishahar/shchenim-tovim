@@ -1,10 +1,10 @@
 import { Chat, Message } from "@typesLib";
 import { pool } from "../../db.js";
-import { GET_CHAT_MESSAGES, GET_USER_CHATS_INFO, NEW_CHAT } from "./chats.db.js";
+import { GET_CHAT_MESSAGES, GET_USER_CHATS_INFO, IS_USER_MEMBER_IN_CHAT, NEW_CHAT, SEND_MESSAGE, UPDATE_CHAT_TIMESTAMP } from "./chats.db.js";
 
 
 class ChatsRepository {
-    getChats = async (userId: number) => {
+    getUserChats = async (userId: number) => {
         const result = await pool.query<Chat>(
             GET_USER_CHATS_INFO, [userId]
         );
@@ -15,12 +15,11 @@ class ChatsRepository {
         try {
             const result = await pool.query<{ id: number }>
                 (
-                    NEW_CHAT, [requestId, user1Id, user2Id] //check if its null will it workkk
+                    NEW_CHAT, [requestId, user1Id, user2Id]
                 );
 
             return result.rows[0];
         } catch (error: any) {
-            // if(error.constraint === 'unique_chat_no_request') - 409 error
             console.error('error in newChat:', error, 'layer: repository');
             throw error;
         }
@@ -36,6 +35,46 @@ class ChatsRepository {
             return result.rows;
         } catch (error) {
             console.error('error in getChatMessages:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
+    validateUserInExitsingChat = async (chatId: number, userId: number) => {
+        try {
+            const result = await pool.query<{ exists: boolean }>
+                (
+                    IS_USER_MEMBER_IN_CHAT, [chatId, userId]
+                );
+
+            return result.rows[0]?.exists ?? false;
+        } catch (error) {
+            console.error('error in validateUserInExitsingChat:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
+    sendMessage = async (chatId: number, senderId: number, content: string) => {
+        try {
+            const result = await pool.query<{ createdAt: string }>
+                (
+                    SEND_MESSAGE, [chatId, senderId, content]
+                );
+
+            return result.rows[0];
+        } catch (error) {
+            console.error('error in sendMessage:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
+    updateChatLastUpdateTime = async (chatId: number, timeOfNewMessage: Date) => {
+        try {
+            await pool.query
+                (
+                    UPDATE_CHAT_TIMESTAMP, [chatId, timeOfNewMessage]
+                );
+        } catch (error) {
+            console.error('error in updateChatLastUpdateTime:', error, 'layer: repository');
             throw error;
         }
     }

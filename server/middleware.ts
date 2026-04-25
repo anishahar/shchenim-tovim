@@ -1,5 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { ExtendedError, Socket } from 'socket.io';
 
 // Extend Express Request type
 declare global {
@@ -29,6 +30,24 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
     next();
   } catch (error) {
     return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+}
+
+export function socketAuthMiddleware(socket: Socket, next: (err?: ExtendedError | undefined) => void) {
+  try {
+    const token = socket.handshake.auth.token;
+
+    if (!token) {
+      return next(new Error("No token"));
+    }
+
+    const user = jwt.verify(token, process.env.JWT_SECRET!) as any;
+
+    socket.data.user = user;
+
+    next();
+  } catch {
+    next(new Error("Unauthorized"));
   }
 }
 
