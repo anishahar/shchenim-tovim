@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../../db.js';
+import { ROLES } from '../../../lib/constants/roles.js';
+import type { UserRole } from '../../../lib/types/user.js';
 
 /**
  * FEATURE 4: ANNOUNCEMENTS CONTROLLER
@@ -66,6 +68,42 @@ class AnnouncementsController {
         } catch (err) {
             console.error('Error creating announcement:', err);
             return res.status(500).json({ error: 'Failed to create announcement' });
+        }
+    }
+
+    // DELETE /api/announcements/:id - Delete an announcement
+    deleteAnnouncement = async (req: any, res: Response) => {
+        try {
+            const { id } = req.params;
+            const userId = req.user.id;
+            const userRole = req.user.role as UserRole;
+
+            // Get the announcement to check ownership
+            const announcement = await pool.query(
+                'SELECT author_id FROM announcements WHERE id = $1',
+                [id]
+            );
+
+            if (announcement.rows.length === 0) {
+                return res.status(404).json({ error: 'Announcement not found' });
+            }
+
+            const isOwner = announcement.rows[0].author_id === userId;
+            const isAreaManager = userRole === ROLES.AREA_MANAGER;
+
+            // House committee can delete own, area manager can delete any
+            if (!isOwner && !isAreaManager) {
+                return res.status(403).json({
+                    error: 'Only announcement owner or area manager can delete'
+                });
+            }
+
+            // Proceed with deletion
+            await pool.query('DELETE FROM announcements WHERE id = $1', [id]);
+            return res.json({ message: 'Announcement deleted successfully' });
+        } catch (err) {
+            console.error('Error deleting announcement:', err);
+            return res.status(500).json({ error: 'Failed to delete announcement' });
         }
     }
 };

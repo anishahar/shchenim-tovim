@@ -10,7 +10,7 @@ type CurrentUser = Pick<User, 'id' | 'name' | 'role'>;
 const MOCK_CURRENT_USER: CurrentUser = {
   id: 1,
   name: 'מנהל מערכת',
-  role: 'admin',
+  role: 'area_manager',
 };
 
 const MOCK_ANNOUNCEMENTS: Announcement[] = [
@@ -121,10 +121,21 @@ function AuthorAvatar({ name }: AuthorAvatarProps) {
 
 interface AnnouncementCardProps {
   announcement: Announcement;
+  currentUser: CurrentUser;
+  onDelete: (id: number) => void;
 }
 
-const AnnouncementCard = memo(function AnnouncementCard({ announcement }: AnnouncementCardProps) {
+const AnnouncementCard = memo(function AnnouncementCard({
+  announcement,
+  currentUser,
+  onDelete
+}: AnnouncementCardProps) {
   const { title, content, author, createdAt } = announcement;
+
+  // Check if user can delete this announcement
+  const isOwner = announcement.author.id === currentUser.id;
+  const isAreaManager = currentUser.role === 'area_manager';
+  const canDelete = isAreaManager || (currentUser.role === 'house_committee' && isOwner);
 
   return (
     <article
@@ -194,6 +205,36 @@ const AnnouncementCard = memo(function AnnouncementCard({ announcement }: Announ
       >
         {content}
       </p>
+
+      {/* Delete button - shown only to authorized users */}
+      {canDelete && (
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-start' }}>
+          <button
+            onClick={() => onDelete(announcement.id)}
+            style={{
+              border: '1px solid rgba(220,38,38,0.3)',
+              background: 'transparent',
+              color: '#dc2626',
+              padding: '8px 14px',
+              borderRadius: 10,
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: 13,
+              transition: 'all 140ms ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#dc2626';
+              e.currentTarget.style.color = '#ffffff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+          >
+            מחק מודעה
+          </button>
+        </div>
+      )}
     </article>
   );
 });
@@ -349,7 +390,9 @@ export default function AnnouncementsList({
   const [search, setSearch] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const isAdmin = currentUser.role === 'admin';
+  // Can create announcements: house_committee or area_manager
+  const canCreateAnnouncement =
+    currentUser.role === 'house_committee' || currentUser.role === 'area_manager';
 
   const sortedAnnouncements = useMemo(
     () => [...announcements].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
@@ -373,6 +416,14 @@ export default function AnnouncementsList({
   // In a real app this would call an API; for now it just closes the form.
   const handlePublish = useCallback((_title: string, _content: string) => {
     setShowCreateForm(false);
+  }, []);
+
+  // In a real app this would call DELETE /api/announcements/:id
+  const handleDelete = useCallback((id: number) => {
+    if (confirm('האם אתה בטוח שברצונך למחוק את המודעה?')) {
+      console.log('Deleting announcement:', id);
+      // API call would go here
+    }
   }, []);
 
   return (
@@ -463,7 +514,7 @@ export default function AnnouncementsList({
               />
             </div>
 
-            {isAdmin && (
+            {canCreateAnnouncement && (
               <button
                 onClick={() => setShowCreateForm((prev) => !prev)}
                 aria-expanded={showCreateForm}
@@ -486,8 +537,8 @@ export default function AnnouncementsList({
           </div>
         </header>
 
-        {/* ── Create Form (admin only) ── */}
-        {isAdmin && showCreateForm && (
+        {/* ── Create Form (house committee & area manager) ── */}
+        {canCreateAnnouncement && showCreateForm && (
           <div id="create-announcement-form">
             <CreateAnnouncementForm onClose={handleCloseForm} onPublish={handlePublish} />
           </div>
@@ -499,7 +550,12 @@ export default function AnnouncementsList({
             <EmptyState />
           ) : (
             filteredAnnouncements.map((announcement) => (
-              <AnnouncementCard key={announcement.id} announcement={announcement} />
+              <AnnouncementCard
+                key={announcement.id}
+                announcement={announcement}
+                currentUser={currentUser}
+                onDelete={handleDelete}
+              />
             ))
           )}
         </section>
