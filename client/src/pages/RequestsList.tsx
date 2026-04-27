@@ -30,20 +30,30 @@ export default function RequestsList() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
           setUserCoords({
             userLat: position.coords.latitude,
             userLng: position.coords.longitude,
           });
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
         }
       );
-      console.log("User coordinates:", userCoords);
+    } else {
+      console.error("Geolocation not supported");
     }
   }, []);
+
+  // Log when userCoords updates
+  useEffect(() => {
+    console.log("userCoords updated:", userCoords);
+  }, [userCoords]);
 
 
 
   const mapContainerStyle = { width: '100%', height: '500px' };
-  const center = { lat: 31.117, lng: 35.0818}; // Center of Israel
+  const center = { lat: userCoords ? userCoords.userLat : 31.117, lng: userCoords ? userCoords.userLng : 35.0818}; //Users location or center of tel aviv
 
 
   useEffect(() => {
