@@ -24,6 +24,9 @@
     "paths": {
       "@typesLib": [
         "../lib/types/index.js"
+      ],
+      "@constantsLib": [
+        "../lib/constants/index.ts",
       ]
     }
   },

@@ -11,7 +11,10 @@
         "declarationMap": true
     },
     "include": [
-        "types/index.ts"
+        "types/index.js",
+        "constants/index.js",
+        "types/**/*.ts",
+        "constants/**/*.ts"
     ],
     "exclude": [
         "node_modules",

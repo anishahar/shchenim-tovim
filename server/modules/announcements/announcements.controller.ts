@@ -1,13 +1,13 @@
+import { ROLES } from '@constantsLib';
+import { UserRole } from '@typesLib';
 import { Request, Response } from 'express';
 import { pool } from '../../db.js';
-import { ROLES } from '../../../lib/constants/roles.js';
-import type { UserRole } from '../../../lib/types/user.js';
 
 /**
  * FEATURE 4: ANNOUNCEMENTS CONTROLLER
  */
 class AnnouncementsController {
-    
+
     // GET /api/announcements - Fetch all board messages
     getAnnouncements = async (req: Request, res: Response) => {
         try {
@@ -51,7 +51,7 @@ class AnnouncementsController {
 
             // Security: We get the author ID from the JWT token (populated by the shared Auth Middleware).
             // This prevents users from forging the author identity.
-            const authorId = req.user.id; 
+            const authorId = req.user.id;
 
             if (!title || !content) {
                 return res.status(400).json({ error: 'Title and content are required' });

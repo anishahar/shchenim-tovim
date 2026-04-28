@@ -7,7 +7,8 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@typesLib": path.resolve(__dirname, "../lib/types")
+      "@typesLib": path.resolve(__dirname, "../lib/types"),
+      "@constantsLib": path.resolve(__dirname, "../lib/constants"),
     }
   },
   server: {
