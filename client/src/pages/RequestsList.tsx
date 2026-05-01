@@ -199,6 +199,9 @@ const markerRequests = filteredRequests
                       <p className="text-gray-400 text-xs">📍 {request.location_text}</p>
                     )}
                   </Link>
+                  <p className="text-gray-500 text-xs mt-1">
+                         פורסם על ידי: {request.user?.name}
+                  </p>
                 </li>
               ))}
             </ul>

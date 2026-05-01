@@ -1,12 +1,33 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api";
+import { useAuth } from "../AuthContext";
+import { useNavigate } from "react-router-dom";
 // import {Request} from "@typesLib"
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
+
+  const navigate = useNavigate();
+
+  const { user } = useAuth();
+  console.log("Current user id:", user?.id);
+  console.log("Current user name:", user?.name); 
+
+  //Delete request
+  function handleDelete() {
+    api.delete(`/requests/${id}`)
+      .then(()  => {
+        alert("הבקשה נמחקה בהצלחה");
+        navigate(`/requests`)
+      })
+      .catch((error) => {
+        console.error("Error deleting request:", error);
+        alert("אירעה שגיאה בעת מחיקת הבקשה");
+      });
+  }
 
   useEffect(() => {
     if (id) {
@@ -59,6 +80,9 @@ export default function RequestDetail() {
             {request.created_at && (
               <span>🕐 {new Date(request.created_at).toLocaleDateString('he-IL')}</span>
             )}
+            <span>
+             פורסם על ידי: {request.user_name}
+                  </span>
           </div>
           {request.image_url && (
             <div className="mb-6">
@@ -69,9 +93,16 @@ export default function RequestDetail() {
               />
             </div>
           )}
-          <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
+        { user?.id !== request.user_id  ? (
+          <button  onClick={() => {/* handle help action */}} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
             אני אעזור
           </button>
+          ): (
+            <button  onClick={handleDelete} className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
+           מחק
+          </button>
+          )
+        }
 
         </div>
       </div>
