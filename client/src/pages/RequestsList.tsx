@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { useNavigate } from "react-router-dom";
+
 
 export default function RequestsList() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -8,6 +11,49 @@ export default function RequestsList() {
   const [textFilter, setTextFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("");
+  const [radiusFilter, setRadiusFilter] = useState<number>(0);
+  const [userCoords, setUserCoords] = useState<userCords | null>(null);
+  //for navigation to request details page on marker click
+  const navigate = useNavigate();
+  //listen to google maps api load
+  const { isLoaded } = useJsApiLoader({
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY, 
+  language: 'he',
+  });
+  //Use geolocation api to get user coordinates
+  type userCords = {
+    userLat: number;
+    userLng: number;
+  }
+  //Get user coordinates on component mount only
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
+          setUserCoords({
+            userLat: position.coords.latitude,
+            userLng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+        }
+      );
+    } else {
+      console.error("Geolocation not supported");
+    }
+  }, []);
+
+  // Log when userCoords updates
+  useEffect(() => {
+    console.log("userCoords updated:", userCoords);
+  }, [userCoords]);
+
+
+
+  const mapContainerStyle = { width: '100%', height: '500px' };
+  const center = { lat: userCoords ? userCoords.userLat : 31.117, lng: userCoords ? userCoords.userLng : 35.0818}; //Users location or center of tel aviv
 
 
   useEffect(() => {
@@ -21,6 +67,23 @@ export default function RequestsList() {
         setLoading(false);
       });
   }, []);
+
+  //Calculate distance between two coordinates using Haversine formula
+  function toRadians(deg: number) {
+  return (deg * Math.PI) / 180;
+  } 
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth radius in km
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
  //Filter based on text
   const normalizedFilter = textFilter.trim().toLowerCase();
@@ -36,13 +99,34 @@ export default function RequestsList() {
   const matchesUrgency = !urgencyFilter || request.urgency === urgencyFilter;
   //Filter based on category
   const matchesCategory = !categoryFilter || request.category === categoryFilter;
+  //Filter based on radius
+  const matchesRadius = !radiusFilter || !userCoords ||            
+  distanceKm(
+    userCoords.userLat, 
+    userCoords.userLng,
+    Number(request.latitude),
+    Number(request.longitude)
+  ) <= radiusFilter; 
 
-  return matchesText && matchesUrgency && matchesCategory;
+  return matchesText && matchesUrgency && matchesCategory && matchesRadius;
 });
+
+//Map only requests with valid coordinates
+const markerRequests = filteredRequests
+  .map((request) => ({
+    id: request.id,
+    title: request.title,
+    lat: Number(request.latitude),
+    lng: Number(request.longitude),
+  }))
+  .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
+
+//console.log("markers count:", markerRequests.length, markerRequests);
 
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4" dir="rtl">
+    <div className="flex gap-6" dir="ltr">
+    <div className="min-h-screen bg-gray-50 py-10 px-4 flex-1" dir="rtl">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
           <h1 className="text-3xl font-bold text-blue-700 text-center mb-8">רשימת בקשות</h1>
@@ -53,6 +137,13 @@ export default function RequestsList() {
               value={textFilter}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTextFilter(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            <input
+              type="number"
+              placeholder="רדיוס בקילומטרים"
+              value={radiusFilter > 0 ? radiusFilter : ""} //Show empty when radius is 0
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRadiusFilter(Number(e.target.value))}
+              className="w-full sm:w-48 border border-gray-300 rounded-lg px-3 py-2"
             />
             <select
                 value={urgencyFilter}
@@ -112,8 +203,35 @@ export default function RequestsList() {
               ))}
             </ul>
           )}
+          
         </div>
+        
+      </div>
+      
+    </div>
+
+    <div className="flex-1 sticky top-4 self-start py-10 pr-4">
+      <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
+      {isLoaded ? (
+        <GoogleMap
+          mapContainerStyle={{ width: '100%', height: '70vh', borderRadius: '8px' }}
+          center={center}
+          zoom={8}
+        >
+          {markerRequests.map((request) => (
+            <Marker
+              key={request.id}
+              position={{ lat: request.lat, lng: request.lng }}
+              title={request.title}
+              onClick={() => navigate(`/requests/${request.id}`)}
+              options={{ cursor: 'pointer' }}
+            />
+          ))}
+        </GoogleMap>
+      ) : null}
       </div>
     </div>
+    
+      </div>
   );
 }
