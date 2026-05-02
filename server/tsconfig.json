@@ -16,8 +16,12 @@
     "allowSyntheticDefaultImports": true,
     "paths": {
       "@typesLib": [
-        "../lib/types/index.js"
-      ]
+        "../lib/types/index.ts"
+      ],
+      "@constantsLib": [
+        "../lib/constants/index.ts",
+        "../lib/constants/*"
+      ],
     }
   },
   "include": [

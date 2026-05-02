@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import type { UserRole } from '../types';
+import type { UserRole } from '@typesLib';
 import { validateCity, validateCityAndStreet, validateFullAddress } from '../utils/geocoding';
 
 export default function Register() {
@@ -67,9 +67,8 @@ export default function Register() {
       );
 
       // Compose address_text for backward compatibility
-      const address_text = `${formData.street} ${formData.streetNumber}${
-        formData.apartment ? ', דירה ' + formData.apartment : ''
-      }, ${formData.city}`;
+      const address_text = `${formData.street} ${formData.streetNumber}${formData.apartment ? ', דירה ' + formData.apartment : ''
+        }, ${formData.city}`;
 
       // Register user (role is always 'resident' by default)
       const response = await fetch('/api/auth/register', {
@@ -83,7 +82,7 @@ export default function Register() {
           city: formData.city,
           street: formData.street,
           street_number: formData.streetNumber,
-          apartment: formData.apartment || null,
+          apartment: formData.apartment || undefined,
           address_text: address_text,
           latitude: location.lat,
           longitude: location.lng,
@@ -115,7 +114,7 @@ export default function Register() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-              שם מלא
+              שם מלא *
             </label>
             <input
               type="text"
@@ -131,7 +130,7 @@ export default function Register() {
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              אימייל
+              אימייל *
             </label>
             <input
               type="email"
@@ -147,7 +146,7 @@ export default function Register() {
 
           <div>
             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-              מספר טלפון
+              מספר טלפון *
             </label>
             <input
               type="tel"
@@ -229,7 +228,7 @@ export default function Register() {
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              סיסמה
+              סיסמה *
             </label>
             <input
               type="password"
@@ -246,7 +245,7 @@ export default function Register() {
 
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              אימות סיסמה
+              אימות סיסמה *
             </label>
             <input
               type="password"

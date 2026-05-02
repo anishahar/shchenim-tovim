@@ -13,4 +13,5 @@ export interface Request {
     imageUrl?: string;
     createdAt: Date;
     updatedAt: Date;
+    distance: number;
 }

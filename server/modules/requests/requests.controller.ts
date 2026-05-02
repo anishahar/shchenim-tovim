@@ -1,41 +1,72 @@
 import { Request, Response } from 'express';
 import { pool } from '../../db.js';
+import { getRequestsSchema } from './requests.validation.js';
+import { usersService } from '../users/users.service.js';
 
 /**
  * FEATURE 1: HELP REQUESTS CONTROLLER
  */
 class RequestController {
-    
+
     // GET /api/requests - Fetch all requests with optional filters and pagination
     getRequests = async (req: Request, res: Response) => {
         try {
-            const { category, urgency, search, page = 1, limit = 20 } = req.query;
+            const { data, error } = getRequestsSchema.safeParse({
+                query: req.query
+            });
+
+            if (error) return res.status(400).json({ errors: error });
+            const { category, urgency, search, page, limit, radius } = data.query;
+
             const offset = (Number(page) - 1) * Number(limit);
 
+            if (!req.user) return res.status(401);
+            const userId = req.user.id;
+
+            const { longitude, latitude } = await usersService.getUserDetails(userId);
+            if (!longitude || !latitude) return; ////////////////// its needs to be NOT NULL.... when we refactor this to use types ill remove this check
+
             let query = `
-                SELECT r.*, u.name as user_name, u.avatar_url 
-                FROM requests r 
-                JOIN users u ON r.user_id = u.id 
-                WHERE r.status != 'closed'
-            `;
-            let params: any[] = [];
+                SELECT *
+                FROM (
+                    SELECT 
+                    r.*, 
+                    u.name as user_name, 
+                    u.avatar_url,
+                    (
+                        6371 * 2 * asin(
+                        sqrt(
+                            pow(sin(radians(($1 - r.latitude) / 2)), 2) +
+                            cos(radians(r.latitude)) *
+                            cos(radians($1)) *
+                            pow(sin(radians(($2 - r.longitude) / 2)), 2)
+                        )
+                        )
+                    ) AS distance
+                    FROM requests r
+                    JOIN users u ON r.user_id = u.id
+                    WHERE r.status != 'closed'
+                ) t
+                WHERE t.distance < $3
+                `;
+            let params: (string | number)[] = [latitude, longitude, radius];
 
             if (category) {
                 params.push(category);
-                query += ` AND r.category = $${params.length}`;
+                query += ` AND t.category = $${params.length}`;
             }
 
             if (urgency) {
                 params.push(urgency);
-                query += ` AND r.urgency = $${params.length}`;
+                query += ` AND t.urgency = $${params.length}`;
             }
 
             if (search) {
                 params.push(`%${search}%`);
-                query += ` AND (r.title ILIKE $${params.length} OR r.description ILIKE $${params.length})`;
+                query += ` AND (r.title ILIKE $${params.length} OR t.description ILIKE $${params.length})`;
             }
 
-            query += ` ORDER BY r.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+            query += ` ORDER BY t.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
             params.push(Number(limit), offset);
 
             const result = await pool.query(query, params);

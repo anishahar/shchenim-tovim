@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { socket } from './socket';
-import { User } from './types';
+import { User } from '@typesLib';
 
 interface AuthContextType {
   user: User | null;
