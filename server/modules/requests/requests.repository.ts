@@ -10,6 +10,7 @@ class RequestsRepository {
                 (
                     GET_REQUESTER_ID, [requestId]
                 );
+            if (result.rows.length === 0) throw new Error("request id does not exist");
             return result.rows[0];
         } catch (error) {
             console.error('error in getRequesterByRequestId:', error, 'layer: repository');

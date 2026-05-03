@@ -1,5 +1,5 @@
 import { memo, useCallback, useMemo, useState } from 'react';
-import type { Announcement, User } from '../types';
+import type { Announcement, User } from '@typesLib';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

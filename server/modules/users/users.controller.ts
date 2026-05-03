@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
-import { pool } from '../../db.js'; // Updated to use { pool } and correct path
+import { pool } from '../../db.js';
+import { usersService } from './users.service.js';
+import { getUserSchema } from './users.validation.js';
 
 class UsersController {
     /**
@@ -24,20 +26,15 @@ class UsersController {
      * Retrieves user profile details by ID
      */
     getUserDetailes = async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const { data, error } = getUserSchema.safeParse(req)
+
+        if (error) return
+        const { id } = data.params;
 
         try {
-            // Updated column names to match your schema (name, avatar_url, etc.)
-            const user = await pool.query(
-                'SELECT id, email, name, role, avatar_url, phone, address_text, latitude, longitude, city, street, street_number, apartment, created_at FROM users WHERE id = $1',
-                [id]
-            );
-
-            if (user.rows.length === 0) {
-                return res.status(404).json({ message: 'User not found' });
-            }
-
-            res.json(user.rows[0]);
+            const user = usersService.getUserDetails(id);
+            if (!user) return res.status(404).json({ message: 'User not found' });
+            res.json(user);
         } catch (error) {
             console.error('Error fetching user profile:', error);
             res.status(500).json({ message: 'Server error' });

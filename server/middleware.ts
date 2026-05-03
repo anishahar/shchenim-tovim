@@ -1,8 +1,8 @@
+import { ROLE_HIERARCHY } from '@constantsLib';
+import { UserRole } from '@typesLib';
 import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { ExtendedError, Socket } from 'socket.io';
-import { ROLE_HIERARCHY } from '../lib/constants/roles.js';
-import type { UserRole } from '../lib/types/user.js';
 
 // Extend Express Request type
 declare global {
