@@ -1,6 +1,11 @@
 import { io, Socket } from "socket.io-client";
 
-export const socket: Socket = io(import.meta.env.VITE_SERVER_URL, {
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const socketUrl =
+    (import.meta.env as Record<string, string | undefined>).VITE_SERVER_URL ||
+    apiUrl.replace(/\/api\/?$/, '');
+
+export const socket: Socket = io(socketUrl, {
     withCredentials: true, //?
     autoConnect: false,
 });
@@ -20,8 +25,12 @@ export const registerSocketEvents = () => {
     });
 
     socket.on("bootstrap_error", (err) => {
-        // show message
+        console.error("socket bootstrap error:", err);
     });
+
 
     //connect_error?
 }
+    if (typeof window !== 'undefined') {
+        (window as any).socket = socket;
+    }

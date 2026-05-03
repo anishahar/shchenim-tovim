@@ -53,7 +53,7 @@ export const IS_USER_MEMBER_IN_CHAT = `
     SELECT EXISTS (
     SELECT 1
     FROM chats
-    WHERE chat_id = $1
+    WHERE id = $1
       AND (user1_id = $2 OR user2_id = $2)
 )`;
 
@@ -61,10 +61,10 @@ export const SEND_MESSAGE = `
     INSERT INTO messages (chat_id, sender_id, content)
     VALUES ($1, $2, $3) 
     RETURNING created_at as "createdAt";
-)`;
+`;
 
 export const UPDATE_CHAT_TIMESTAMP = `
     UPDATE chats
     SET updated_at = $2 
     WHERE id = $1;
-)`;
+`;
