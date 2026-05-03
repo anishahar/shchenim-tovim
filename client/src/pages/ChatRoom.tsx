@@ -1,61 +1,28 @@
-import { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { Chat, Message } from '@typesLib';
+import { useAuth } from '../AuthContext';
+import api from '../api';
+import { socket } from '../socket';
+import type { Message } from '@typesLib';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const AVATAR_COLORS = ['#01696f', '#437a22', '#7a39bb', '#da7101', '#006494', '#a13544'] as const;
 
-const CURRENT_USER_ID = 999;
-
-const AVATAR_COLORS = [
-  '#01696f',
-  '#437a22',
-  '#7a39bb',
-  '#da7101',
-  '#006494',
-  '#a13544',
-] as const;
-
-const STATUS_LABELS: Record<NonNullable<Chat['request']>['status'], string> = {
-  open: 'פתוחה',
-  in_progress: 'בטיפול',
-  completed: 'הושלמה',
+type MessageApiResponse = Omit<Message, 'createdAt'> & {
+  createdAt: string;
 };
 
-// ─── Mock Data (UI only) ──────────────────────────────────────────────────────
+type SocketMessagePayload = {
+  id?: number;
+  chatId: number;
+  senderId: number;
+  content: string;
+  createdAt: string | Date;
+};
 
-const MOCK_CHATS: Chat[] = [
-  {
-    id: 1,
-    request: { id: 101, title: 'עזרה עם קניות', imageUrl: 'https://via.placeholder.com/80', status: 'open' },
-    otherUser: { id: 301, name: 'דור', avatarUrl: undefined },
-    createdAt: new Date('2026-04-04T14:00:00'),
-    updatedAt: new Date('2026-04-04T14:45:00'),
-  },
-  {
-    id: 2,
-    request: { id: 102, title: 'איסוף תרופות', imageUrl: undefined, status: 'in_progress' },
-    otherUser: { id: 302, name: 'משה', avatarUrl: undefined },
-    createdAt: new Date('2026-04-04T12:00:00'),
-    updatedAt: new Date('2026-04-04T13:30:00'),
-  },
-  {
-    id: 3,
-    request: { id: 103, title: 'הוצאת הכלב', imageUrl: undefined, status: 'completed' },
-    otherUser: { id: 303, name: 'נועה', avatarUrl: undefined },
-    createdAt: new Date('2026-04-03T09:00:00'),
-    updatedAt: new Date('2026-04-03T10:00:00'),
-  },
-];
-
-const MOCK_MESSAGES: Message[] = [
-  { id: 1, chatId: 1, senderId: 301, content: 'היי, אתה פנוי לעזור לי עם קניות?', createdAt: new Date('2026-04-04T14:10:00') },
-  { id: 2, chatId: 1, senderId: 999, content: 'כן, בכיף. מתי נוח לך?', createdAt: new Date('2026-04-04T14:15:00') },
-  { id: 3, chatId: 1, senderId: 301, content: 'עוד שעה בערך, זה מתאים?', createdAt: new Date('2026-04-04T14:20:00') },
-  { id: 4, chatId: 2, senderId: 302, content: 'צריך איסוף תרופות מהסופר-פארם.', createdAt: new Date('2026-04-04T12:20:00') },
-  { id: 5, chatId: 2, senderId: 999, content: 'סבבה, אני בודק מתי אני יכול.', createdAt: new Date('2026-04-04T12:28:00') },
-];
-
-// ─── Pure Utilities ───────────────────────────────────────────────────────────
+type SocketAck = {
+  ok: boolean;
+  error?: string;
+};
 
 function getAvatarColor(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
@@ -72,41 +39,63 @@ function getInitials(name: string): string {
 }
 
 function formatMessageTime(date: Date): string {
-  return date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString('he-IL', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
-function getInitialMessages(chatId: number): Message[] {
-  return MOCK_MESSAGES
-    .filter((m) => m.chatId === chatId)
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+function normalizeMessage(message: MessageApiResponse): Message {
+  return {
+    ...message,
+    createdAt: new Date(message.createdAt),
+  };
 }
 
-// ─── Sub-Components ───────────────────────────────────────────────────────────
+function normalizeSocketMessage(message: SocketMessagePayload): Message {
+  return {
+    id: message.id ?? Date.now(),
+    chatId: message.chatId,
+    senderId: message.senderId,
+    content: message.content,
+    createdAt: new Date(message.createdAt),
+  };
+}
 
-interface AvatarProps {
+function Avatar({
+  name,
+  url,
+  userId,
+  size = 50,
+}: {
   name: string;
   url?: string;
   userId: number;
   size?: number;
-}
-
-function Avatar({ name, url, userId, size = 50 }: AvatarProps) {
-  const sharedStyle: React.CSSProperties = {
-    width: size,
-    height: size,
-    borderRadius: '50%',
-    flexShrink: 0,
-  };
-
+}) {
   if (url) {
-    return <img src={url} alt={name} style={{ ...sharedStyle, objectFit: 'cover' }} />;
+    return (
+      <img
+        src={url}
+        alt={name}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          flexShrink: 0,
+        }}
+      />
+    );
   }
 
   return (
     <div
       aria-hidden
       style={{
-        ...sharedStyle,
+        width: size,
+        height: size,
+        borderRadius: '50%',
         background: getAvatarColor(userId),
         display: 'flex',
         alignItems: 'center',
@@ -115,6 +104,7 @@ function Avatar({ name, url, userId, size = 50 }: AvatarProps) {
         fontWeight: 700,
         fontSize: 14,
         userSelect: 'none',
+        flexShrink: 0,
       }}
     >
       {getInitials(name)}
@@ -122,20 +112,18 @@ function Avatar({ name, url, userId, size = 50 }: AvatarProps) {
   );
 }
 
-// ─── MessageBubble ────────────────────────────────────────────────────────────
-
-interface MessageBubbleProps {
+const MessageBubble = memo(function MessageBubble({
+  message,
+  isOwn,
+}: {
   message: Message;
   isOwn: boolean;
-}
-
-const MessageBubble = memo(function MessageBubble({ message, isOwn }: MessageBubbleProps) {
+}) {
   return (
     <div
       role="listitem"
       style={{
         display: 'flex',
-        // Own messages sit on the right in RTL layouts (flex-start = right edge)
         justifyContent: isOwn ? 'flex-start' : 'flex-end',
         marginBottom: 10,
       }}
@@ -180,112 +168,163 @@ const MessageBubble = memo(function MessageBubble({ message, isOwn }: MessageBub
   );
 });
 
-// ─── ChatNotFound ─────────────────────────────────────────────────────────────
-
-interface ChatNotFoundProps {
-  onBack: () => void;
-}
-
-function ChatNotFound({ onBack }: ChatNotFoundProps) {
-  return (
-    <div
-      dir="rtl"
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        boxSizing: 'border-box',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 520,
-          background: '#ffffff',
-          border: '1px solid rgba(40,37,29,0.10)',
-          borderRadius: 18,
-          padding: 32,
-          textAlign: 'center',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: 24, color: '#1f3f8c' }}>השיחה לא נמצאה</h2>
-        <p style={{ marginTop: 12, color: '#5e5a53' }}>
-          לא הצלחנו למצוא את השיחה שביקשת לפתוח.
-        </p>
-        <button
-          onClick={onBack}
-          style={{
-            marginTop: 16,
-            border: 'none',
-            background: '#1f3f8c',
-            color: '#ffffff',
-            padding: '10px 16px',
-            borderRadius: 10,
-            cursor: 'pointer',
-            fontWeight: 700,
-          }}
-        >
-          חזרה לשיחות
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── ChatRoom ─────────────────────────────────────────────────────────────────
-
 export default function ChatRoom() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const chatId = Number(id);
 
-  const chat = useMemo(
-    () => MOCK_CHATS.find((c) => c.id === chatId),
-    [chatId],
-  );
-
-  const [messages, setMessages] = useState<Message[]>(() => getInitialMessages(chatId));
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [socketError, setSocketError] = useState<string | null>(null);
+  const [isSocketConnected, setIsSocketConnected] = useState(socket.connected);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever a new message arrives
+  useEffect(() => {
+    async function fetchMessages() {
+      if (!chatId || Number.isNaN(chatId)) {
+        setError('צ׳אט לא תקין');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await api.get<MessageApiResponse[]>(`/chats/${chatId}/messages`);
+
+        const normalizedMessages = response.data
+          .map(normalizeMessage)
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+        setMessages(normalizedMessages);
+      } catch (err) {
+        console.error('Failed to fetch chat messages:', err);
+        setError('לא הצלחנו לטעון את ההודעות');
+        setMessages([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchMessages();
+  }, [chatId]);
+
+  useEffect(() => {
+    if (!user || !chatId || Number.isNaN(chatId)) return;
+
+    function handleConnect() {
+      setIsSocketConnected(true);
+      setSocketError(null);
+      joinChatRoom();
+    }
+
+    function handleDisconnect() {
+      setIsSocketConnected(false);
+      setSocketError('החיבור לצ׳אט נותק');
+    }
+
+    function handleBootstrapError(errorCode: string) {
+      setIsSocketConnected(false);
+      setSocketError(`שגיאה בחיבור לצ׳אט: ${errorCode}`);
+    }
+
+    function handleConnectError(error: Error) {
+      setIsSocketConnected(false);
+      setSocketError(error.message || 'החיבור לצ׳אט נכשל');
+    }
+
+    function joinChatRoom() {
+      socket.emit('join_chat', chatId, (response: SocketAck) => {
+        if (!response?.ok) {
+          setSocketError(response?.error || 'לא ניתן להצטרף לצ׳אט');
+          return;
+        }
+
+        setSocketError(null);
+      });
+    }
+
+    function handleNewMessage(message: SocketMessagePayload) {
+      if (message.chatId !== chatId) return;
+
+      const normalizedMessage = normalizeSocketMessage(message);
+
+      setMessages((prev) => {
+        const exists = prev.some((item) => item.id === normalizedMessage.id);
+
+        if (exists) {
+          return prev;
+        }
+
+        return [...prev, normalizedMessage].sort(
+          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+        );
+      });
+    }
+
+    setIsSocketConnected(socket.connected);
+
+    socket.on('connect', handleConnect);
+    socket.on('disconnect', handleDisconnect);
+    socket.on('connect_error', handleConnectError);
+    socket.on('bootstrap_error', handleBootstrapError);
+    socket.on('new_message', handleNewMessage);
+
+    if (socket.connected) {
+      joinChatRoom();
+    }
+
+    return () => {
+      socket.off('connect', handleConnect);
+      socket.off('disconnect', handleDisconnect);
+      socket.off('connect_error', handleConnectError);
+      socket.off('bootstrap_error', handleBootstrapError);
+      socket.off('new_message', handleNewMessage);
+    };
+  }, [chatId, user]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = useCallback(() => {
     const trimmed = input.trim();
-    if (!trimmed || !chatId) return;
 
-    const newMessage: Message = {
-      id: Date.now(),
-      chatId,
-      senderId: CURRENT_USER_ID,
-      content: trimmed,
-      createdAt: new Date(),
-    };
+    if (!trimmed || !chatId || Number.isNaN(chatId) || !user || !socket.connected) {
+      return;
+    }
 
-    setMessages((prev) => [...prev, newMessage]);
-    setInput('');
-  }, [input, chatId]);
+    socket.emit(
+      'send_message',
+      {
+        chatId,
+        content: trimmed,
+      },
+      (response: SocketAck) => {
+        if (!response?.ok) {
+          setSocketError(response?.error || 'שליחת ההודעה נכשלה');
+          return;
+        }
+
+        setInput('');
+        setSocketError(null);
+      }
+    );
+  }, [input, chatId, user]);
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter') {
       e.preventDefault();
       handleSend();
     }
   }
 
-  const goBack = useCallback(() => navigate('/chats'), [navigate]);
-
-  if (!chat) {
-    return <ChatNotFound onBack={goBack} />;
-  }
-
-  const canSend = input.trim().length > 0;
+  const canSend = input.trim().length > 0 && !!user && isSocketConnected;
 
   return (
     <div
@@ -299,7 +338,7 @@ export default function ChatRoom() {
       }}
     >
       <section
-        aria-label={`שיחה עם ${chat.otherUser.name}`}
+        aria-label="חדר צ׳אט"
         style={{
           width: '100%',
           maxWidth: 760,
@@ -313,7 +352,6 @@ export default function ChatRoom() {
           boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
         }}
       >
-        {/* ── Header ── */}
         <header
           style={{
             padding: '16px 18px',
@@ -325,7 +363,7 @@ export default function ChatRoom() {
           }}
         >
           <button
-            onClick={goBack}
+            onClick={() => navigate('/chats')}
             aria-label="חזרה לשיחות"
             title="חזרה לשיחות"
             style={{
@@ -343,12 +381,7 @@ export default function ChatRoom() {
             ←
           </button>
 
-          <Avatar
-            name={chat.otherUser.name}
-            url={chat.otherUser.avatarUrl}
-            userId={chat.otherUser.id}
-            size={50}
-          />
+          <Avatar name={`צ׳אט ${chatId}`} userId={chatId || 1} size={50} />
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
@@ -361,55 +394,35 @@ export default function ChatRoom() {
                 textOverflow: 'ellipsis',
               }}
             >
-              {chat.otherUser.name}
+              צ׳אט #{chatId}
             </div>
+
             <div
               style={{
                 marginTop: 4,
                 fontSize: 13,
                 color: '#5e5a53',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
               }}
             >
-              {chat.request?.title ?? 'צ׳אט כללי'}
+              {isSocketConnected ? 'מחובר לצ׳אט' : 'מנותק מהצ׳אט'}
             </div>
           </div>
-
-          {chat.request && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-              {chat.request.imageUrl && (
-                <img
-                  src={chat.request.imageUrl}
-                  alt=""
-                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 10,
-                    objectFit: 'cover',
-                    border: '1px solid rgba(40,37,29,0.08)',
-                  }}
-                />
-              )}
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '4px 8px',
-                  borderRadius: 999,
-                  background: 'rgba(1,105,111,0.10)',
-                  color: '#01696f',
-                }}
-              >
-                {STATUS_LABELS[chat.request.status]}
-              </span>
-            </div>
-          )}
         </header>
 
-        {/* ── Messages ── */}
+        {socketError && (
+          <div
+            style={{
+              padding: '10px 16px',
+              background: '#fff4e5',
+              color: '#8a4b00',
+              fontSize: 13,
+              borderBottom: '1px solid rgba(138,75,0,0.15)',
+            }}
+          >
+            {socketError}
+          </div>
+        )}
+
         <main
           role="list"
           aria-label="הודעות"
@@ -420,34 +433,27 @@ export default function ChatRoom() {
             overflowY: 'auto',
           }}
         >
-          {messages.length === 0 ? (
-            <div
-              style={{
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#7a7974',
-                fontSize: 14,
-                textAlign: 'center',
-              }}
-            >
+          {isLoading ? (
+            <div style={{ textAlign: 'center', color: '#7a7974' }}>טוען הודעות...</div>
+          ) : error ? (
+            <div style={{ textAlign: 'center', color: '#a13544' }}>{error}</div>
+          ) : messages.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#7a7974' }}>
               עדיין אין הודעות בשיחה הזאת
             </div>
           ) : (
             messages.map((message) => (
               <MessageBubble
-                key={message.id}
+                key={`${message.id}-${message.createdAt.getTime()}`}
                 message={message}
-                isOwn={message.senderId === CURRENT_USER_ID}
+                isOwn={message.senderId === user?.id}
               />
             ))
           )}
-          {/* Anchor element for auto-scroll */}
+
           <div ref={messagesEndRef} />
         </main>
 
-        {/* ── Composer ── */}
         <footer
           style={{
             padding: '14px 16px',
@@ -458,23 +464,25 @@ export default function ChatRoom() {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <input
               type="text"
-              placeholder="כתוב הודעה..."
+              placeholder={isSocketConnected ? 'כתוב הודעה...' : 'אין חיבור לצ׳אט'}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
+              disabled={!isSocketConnected}
               aria-label="הודעה חדשה"
               style={{
                 flex: 1,
                 padding: '12px 14px',
                 border: '1px solid rgba(40,37,29,0.14)',
                 borderRadius: 12,
-                background: '#f6f3ef',
+                background: isSocketConnected ? '#f6f3ef' : '#eeeeee',
                 fontSize: 14,
                 color: '#28251d',
                 outline: 'none',
                 boxSizing: 'border-box',
               }}
             />
+
             <button
               onClick={handleSend}
               disabled={!canSend}
@@ -488,7 +496,6 @@ export default function ChatRoom() {
                 cursor: canSend ? 'pointer' : 'not-allowed',
                 fontWeight: 700,
                 fontSize: 14,
-                transition: 'background 140ms ease',
               }}
             >
               שלח
