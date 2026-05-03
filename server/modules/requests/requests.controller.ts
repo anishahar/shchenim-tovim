@@ -24,7 +24,7 @@ class RequestController {
             const userId = req.user.id;
 
             const { longitude, latitude } = await usersService.getUserDetails(userId);
-            if (!longitude || !latitude) return; ////////////////// its needs to be NOT NULL.... when we refactor this to use types ill remove this check
+            if (longitude === null || latitude === null) return res.status(400).json({ error: 'user needs a home location' }); ////////////////// its needs to be NOT NULL.... when we refactor this to use types ill remove this check
 
             let query = `
                 SELECT *
@@ -63,7 +63,7 @@ class RequestController {
 
             if (search) {
                 params.push(`%${search}%`);
-                query += ` AND (r.title ILIKE $${params.length} OR t.description ILIKE $${params.length})`;
+                query += ` AND (t.title ILIKE $${params.length} OR t.description ILIKE $${params.length})`;
             }
 
             query += ` ORDER BY t.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -79,8 +79,8 @@ class RequestController {
                 urgency: row.urgency,
                 status: row.status,
                 location_text: row.location_text,
-                latitude: row.latitude,    // Added: for map integration
-                longitude: row.longitude,  // Added: for map integration
+                latitude: row.latitude,
+                longitude: row.longitude,
                 image_url: row.image_url,
                 created_at: row.created_at,
                 user: {
@@ -90,7 +90,7 @@ class RequestController {
                 }
             }));
 
-            return res.json({
+            return res.status(200).json({
                 data: formattedData,
                 total: result.rowCount,
                 page: Number(page)
