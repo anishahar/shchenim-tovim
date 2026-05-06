@@ -1,11 +1,11 @@
 import { Chat, Message } from "@typesLib";
 import { pool } from "../../db.js";
-import { GET_CHAT_MESSAGES, GET_USER_CHATS_INFO, IS_USER_MEMBER_IN_CHAT, NEW_CHAT, SEND_MESSAGE, UPDATE_CHAT_TIMESTAMP } from "./chats.db.js";
+import { GET_CHAT_MESSAGES, GET_UNREAD_MESSAGES_AMOUNT, GET_USER_CHATS_INFO, IS_USER_MEMBER_IN_CHAT, NEW_CHAT, SEND_MESSAGE, UPDATE_CHAT_TIMESTAMP, UPDATE_LAST_READ_TIMESTAMP } from "./chats.db.js";
 
 
 class ChatsRepository {
     getUserChats = async (userId: number) => {
-        const result = await pool.query<Chat>(
+        const result = await pool.query<Omit<Chat, "unreadMessagesAmount">>(
             GET_USER_CHATS_INFO, [userId]
         );
         return result.rows;
@@ -75,6 +75,31 @@ class ChatsRepository {
                 );
         } catch (error) {
             console.error('error in updateChatLastUpdateTime:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
+    updateLastReadTime = async (chatId: number, userId: number) => {
+        try {
+            await pool.query
+                (
+                    UPDATE_LAST_READ_TIMESTAMP, [userId, chatId]
+                );
+        } catch (error) {
+            console.error('error in updateLastReadTime:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
+    getUnreadMessagesAmount = async (chatId: number, userId: number) => {
+        try {
+            const res = await pool.query<{ unreadMessagesAmount: number }>
+                (
+                    GET_UNREAD_MESSAGES_AMOUNT, [chatId, userId]
+                );
+            return res.rows[0];
+        } catch (error) {
+            console.error('error in getUnreadMessagesAmount:', error, 'layer: repository');
             throw error;
         }
     }

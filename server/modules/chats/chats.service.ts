@@ -1,11 +1,21 @@
+import { Chat } from "@typesLib";
 import { requestsService } from "../requests/requests.service.js";
 import { chatsRepository } from "./chats.repository.js";
 
 
 class ChatsService {
-    getUserChats = async (userId: number) => {
+    getUserChats = async (userId: number): Promise<Chat[]> => {
         try {
-            const chats = await chatsRepository.getUserChats(userId);
+            const dbChats = await chatsRepository.getUserChats(userId);
+
+            const chats = await Promise.all(
+                dbChats.map(async (chat) => {
+                    const { unreadMessagesAmount } = await chatsRepository.getUnreadMessagesAmount(chat.id, userId)
+                    return { ...chat, unreadMessagesAmount } as Chat
+                }
+                )
+            )
+
             return chats;
         } catch (error) {
             console.error('error in getUserChats:', error, 'layer: service');
@@ -77,7 +87,25 @@ class ChatsService {
                 chatId,
                 senderId,
                 error,
-            });
+            }, 'layer: service');
+            throw error;
+        }
+    }
+
+    updateLastReadTime = async (chatId: number, userId: number) => {
+        try {
+            const isMember = await this.validateUserInExitsingChat(chatId, userId);
+            if (!isMember) {
+                throw new Error("Not a member");
+            };
+            await chatsRepository.updateLastReadTime(chatId, userId);
+        }
+        catch (error) {
+            console.error('updateLastReadTime failed', {
+                chatId,
+                userId,
+                error,
+            }, 'layer: service');
             throw error;
         }
     }
