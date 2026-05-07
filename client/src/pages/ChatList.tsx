@@ -30,6 +30,7 @@ const MOCK_CHATS: ChatWithLastMessage[] = [
       status: 'open',
     },
     otherUser: { id: 301, name: 'דור', avatarUrl: undefined },
+    unreadMessagesAmount: 0,
     createdAt: new Date('2026-04-04T14:00:00'),
     updatedAt: new Date('2026-04-04T14:45:00'),
   },
@@ -42,6 +43,7 @@ const MOCK_CHATS: ChatWithLastMessage[] = [
       status: 'in_progress',
     },
     otherUser: { id: 302, name: 'משה', avatarUrl: undefined },
+    unreadMessagesAmount: 0,
     createdAt: new Date('2026-04-04T12:00:00'),
     updatedAt: new Date('2026-04-04T13:30:00'),
   },
@@ -346,6 +348,9 @@ export default function ChatList() {
 
         const response = await api.get<ChatApiResponse[]>('/chats');
         const normalizedChats = response.data.map(normalizeChat);
+        setChats(normalizedChats);
+        setIsLoading(false);
+
         const chatsWithLastMessages = await Promise.all(
           normalizedChats.map(async (chat) => {
             if (chat.lastMessage) return chat;

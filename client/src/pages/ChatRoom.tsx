@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
@@ -23,6 +23,45 @@ type SocketAck = {
   ok: boolean;
   error?: string;
 };
+
+type RequestStatus = 'open' | 'in_progress' | 'completed';
+
+type ChatMeta = {
+  id: number;
+  request: {
+    id: number;
+    title: string;
+    status: RequestStatus;
+  } | null;
+  otherUser: {
+    id: number;
+    name: string;
+    avatarUrl?: string;
+  };
+};
+
+type ChatApiResponse = ChatMeta & {
+  createdAt: string;
+  updatedAt: string;
+};
+
+type RequestDetailsResponse = {
+  user_id: number;
+};
+
+const STATUS_LABELS: Record<RequestStatus, string> = {
+  open: 'פתוחה',
+  in_progress: 'בטיפול',
+  completed: 'הושלמה',
+};
+
+const STATUS_STYLES: Record<RequestStatus, CSSProperties> = {
+  open: { background: 'rgba(218,113,1,0.12)', color: '#da7101' },
+  in_progress: { background: 'rgba(1,105,111,0.10)', color: '#01696f' },
+  completed: { background: 'rgba(67,122,34,0.12)', color: '#437a22' },
+};
+
+const REQUEST_STATUS_OPTIONS: RequestStatus[] = ['open', 'in_progress', 'completed'];
 
 function getAvatarColor(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
@@ -180,8 +219,44 @@ export default function ChatRoom() {
   const [error, setError] = useState<string | null>(null);
   const [socketError, setSocketError] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(socket.connected);
+  const [chatMeta, setChatMeta] = useState<ChatMeta | null>(null);
+  const [requestOwnerId, setRequestOwnerId] = useState<number | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function fetchChatMeta() {
+      if (!chatId || Number.isNaN(chatId)) return;
+
+      try {
+        const response = await api.get<ChatApiResponse[]>('/chats');
+        const currentChat = response.data.find((chat) => chat.id === chatId);
+        setChatMeta(currentChat ?? null);
+
+        if (!currentChat?.request) {
+          setRequestOwnerId(null);
+          return;
+        }
+
+        try {
+          const requestResponse = await api.get<RequestDetailsResponse>(
+            `/requests/${currentChat.request.id}`
+          );
+          setRequestOwnerId(requestResponse.data.user_id);
+        } catch (err) {
+          console.error('Failed to fetch request owner:', err);
+          setRequestOwnerId(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch chat details:', err);
+        setChatMeta(null);
+        setRequestOwnerId(null);
+      }
+    }
+
+    fetchChatMeta();
+  }, [chatId]);
 
   useEffect(() => {
     async function fetchMessages() {
@@ -324,7 +399,36 @@ export default function ChatRoom() {
     }
   }
 
+  async function handleStatusChange(nextStatus: RequestStatus) {
+    if (!chatMeta?.request || nextStatus === chatMeta.request.status) return;
+
+    try {
+      setIsUpdatingStatus(true);
+      await api.patch(`/requests/${chatMeta.request.id}`, { status: nextStatus });
+      setChatMeta((prev) =>
+        prev?.request
+          ? {
+              ...prev,
+              request: {
+                ...prev.request,
+                status: nextStatus,
+              },
+            }
+          : prev
+      );
+    } catch (err) {
+      console.error('Failed to update request status:', err);
+      setSocketError('לא הצלחנו לעדכן את סטטוס הבקשה');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
   const canSend = input.trim().length > 0 && !!user && isSocketConnected;
+  const headerTitle = chatMeta?.request?.title ?? `צ׳אט #${chatId}`;
+
+  const otherUserName = chatMeta?.otherUser.name ?? `צ׳אט ${chatId}`;
+  const canChangeStatus = !!chatMeta?.request && requestOwnerId === user?.id;
 
   return (
     <div
@@ -381,12 +485,17 @@ export default function ChatRoom() {
             ←
           </button>
 
-          <Avatar name={`צ׳אט ${chatId}`} userId={chatId || 1} size={50} />
+          <Avatar
+            name={otherUserName}
+            url={chatMeta?.otherUser.avatarUrl}
+            userId={chatMeta?.otherUser.id ?? (chatId || 1)}
+            size={50}
+          />
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 18,
+                fontSize: chatMeta?.request ? 0 : 18,
                 fontWeight: 800,
                 color: '#1f3f8c',
                 whiteSpace: 'nowrap',
@@ -394,7 +503,10 @@ export default function ChatRoom() {
                 textOverflow: 'ellipsis',
               }}
             >
-              צ׳אט #{chatId}
+              {chatMeta?.request && (
+                <span style={{ fontSize: 18 }}>{`${otherUserName} - ${headerTitle}`}</span>
+              )}
+              {otherUserName}
             </div>
 
             <div
@@ -402,11 +514,64 @@ export default function ChatRoom() {
                 marginTop: 4,
                 fontSize: 13,
                 color: '#5e5a53',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap',
               }}
             >
               {isSocketConnected ? 'מחובר לצ׳אט' : 'מנותק מהצ׳אט'}
             </div>
           </div>
+
+          {chatMeta?.request && (
+            <div
+              style={{
+                marginInlineStart: 'auto',
+                flexShrink: 0,
+              }}
+            >
+              {canChangeStatus ? (
+                <select
+                  value={chatMeta.request.status}
+                  disabled={isUpdatingStatus}
+                  onChange={(e) => handleStatusChange(e.target.value as RequestStatus)}
+                  aria-label="עדכון סטטוס הבקשה"
+                  title="עדכון סטטוס הבקשה"
+                  style={{
+                    border: 'none',
+                    borderRadius: 999,
+                    cursor: isUpdatingStatus ? 'wait' : 'pointer',
+                    fontSize: 14,
+                    fontWeight: 800,
+                    padding: '8px 14px',
+                    outline: 'none',
+                    ...STATUS_STYLES[chatMeta.request.status],
+                  }}
+                >
+                  {REQUEST_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {STATUS_LABELS[status]}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    borderRadius: 999,
+                    fontSize: 14,
+                    fontWeight: 800,
+                    padding: '8px 14px',
+                    ...STATUS_STYLES[chatMeta.request.status],
+                  }}
+                >
+                  {STATUS_LABELS[chatMeta.request.status]}
+                </span>
+              )}
+            </div>
+          )}
         </header>
 
         {socketError && (
