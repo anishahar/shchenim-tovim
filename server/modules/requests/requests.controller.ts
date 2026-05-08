@@ -45,7 +45,7 @@ class RequestController {
                     ) AS distance
                     FROM requests r
                     JOIN users u ON r.user_id = u.id
-                    WHERE r.status != 'closed'
+                    WHERE r.status != 'completed'
                 ) t
                 WHERE t.distance < $3
                 `;

@@ -22,12 +22,6 @@ export default function Navbar() {
               בקשות
             </Link>
             <Link
-              to="/map"
-              className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
-            >
-              מפה
-            </Link>
-            <Link
               to="/chats"
               className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
             >
