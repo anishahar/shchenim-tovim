@@ -113,9 +113,8 @@ export default function Profile() {
         );
 
         // Compose address_text
-        const address_text = `${formData.street} ${formData.streetNumber}${
-          formData.apartment ? ', דירה ' + formData.apartment : ''
-        }, ${formData.city}`;
+        const address_text = `${formData.street} ${formData.streetNumber}${formData.apartment ? ', דירה ' + formData.apartment : ''
+          }, ${formData.city}`;
 
         updateData = {
           ...updateData,
