@@ -1,6 +1,6 @@
+import { FirstMessageInChat, FirstMessageInRequestChat, SocketMessage, SocketResponse } from '@typesLib';
 import { Server, Socket } from 'socket.io';
 import { chatsService } from '../modules/chats/chats.service.js';
-import { FirstMessageInChat, FirstMessageInRequestChat, SocketMessage, SocketResponse } from '@typesLib';
 import { newChatSchema, newRequesrtChatSchema, sendMessageSchema } from './chatEvents.validation.js';
 
 export const registerChatEvents = (io: Server, socket: Socket) => {

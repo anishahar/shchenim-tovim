@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import type { UserRole } from '../types';
+import { UserRole } from '@typesLib';
+import { useEffect, useState } from 'react';
 import api from '../api';
 
 interface AdminUser {

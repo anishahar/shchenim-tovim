@@ -1,6 +1,8 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Chat } from '@typesLib';
+import api from '../api';
+import { socket } from '../socket';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -13,8 +15,12 @@ const AVATAR_COLORS = [
   '#a13544',
 ] as const;
 
-// for UI 
-const MOCK_CHATS: Chat[] = [
+type ChatWithLastMessage = Chat & {
+  lastMessage?: string;
+};
+
+// זמני בלבד, אפשר למחוק אחר כך
+const MOCK_CHATS: ChatWithLastMessage[] = [
   {
     id: 1,
     request: {
@@ -39,23 +45,22 @@ const MOCK_CHATS: Chat[] = [
     createdAt: new Date('2026-04-04T12:00:00'),
     updatedAt: new Date('2026-04-04T13:30:00'),
   },
-  {
-    id: 3,
-    request: {
-      id: 103,
-      title: 'הוצאת הכלב',
-      imageUrl: undefined,
-      status: 'completed',
-    },
-    otherUser: { id: 303, name: 'נועה', avatarUrl: undefined },
-    createdAt: new Date('2026-04-03T09:00:00'),
-    updatedAt: new Date('2026-04-03T10:00:00'),
-  },
 ];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type RequestStatus = NonNullable<Chat['request']>['status'];
+
+type ChatApiResponse = Omit<Chat, 'createdAt' | 'updatedAt'> & {
+  createdAt: string;
+  updatedAt: string;
+  lastMessage?: string;
+};
+
+type MessageApiResponse = {
+  content: string;
+  createdAt: string;
+};
 
 // ─── Pure Utilities ───────────────────────────────────────────────────────────
 
@@ -84,6 +89,21 @@ function formatRelativeDate(date: Date): string {
     return 'אתמול';
   }
   return date.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' });
+}
+
+function normalizeChat(chat: ChatApiResponse): ChatWithLastMessage {
+  return {
+    ...chat,
+    createdAt: new Date(chat.createdAt),
+    updatedAt: new Date(chat.updatedAt),
+  };
+}
+
+function getLastMessage(messages: MessageApiResponse[]): string | undefined {
+  return messages
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+    ?.content;
 }
 
 const STATUS_LABELS: Record<RequestStatus, string> = {
@@ -170,13 +190,13 @@ function StatusBadge({ status }: StatusBadgeProps) {
 // ─── ChatItem ─────────────────────────────────────────────────────────────────
 
 interface ChatItemProps {
-  chat: Chat;
+  chat: ChatWithLastMessage;
   isSelected: boolean;
   onClick: () => void;
 }
 
 const ChatItem = memo(function ChatItem({ chat, isSelected, onClick }: ChatItemProps) {
-  const { otherUser, request, updatedAt } = chat;
+  const { otherUser, request, updatedAt, lastMessage } = chat;
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -209,7 +229,6 @@ const ChatItem = memo(function ChatItem({ chat, isSelected, onClick }: ChatItemP
       <Avatar name={otherUser.name} url={otherUser.avatarUrl} userId={otherUser.id} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Header row: name + timestamp */}
         <div
           style={{
             display: 'flex',
@@ -238,7 +257,6 @@ const ChatItem = memo(function ChatItem({ chat, isSelected, onClick }: ChatItemP
           </time>
         </div>
 
-        {/* Request title */}
         <p
           style={{
             marginTop: 6,
@@ -249,10 +267,9 @@ const ChatItem = memo(function ChatItem({ chat, isSelected, onClick }: ChatItemP
             textOverflow: 'ellipsis',
           }}
         >
-          {request?.title ?? 'צ׳אט כללי'}
+          {lastMessage || 'אין הודעות עדיין'}
         </p>
 
-        {/* Request metadata */}
         {request && (
           <div
             style={{
@@ -313,14 +330,80 @@ function SearchIcon() {
 
 // ─── ChatList ─────────────────────────────────────────────────────────────────
 
-interface ChatListProps {
-  chats?: Chat[];
-}
-
-export default function ChatList({ chats = MOCK_CHATS }: ChatListProps) {
+export default function ChatList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<number | undefined>();
+  const [chats, setChats] = useState<ChatWithLastMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchChats() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await api.get<ChatApiResponse[]>('/chats');
+        const normalizedChats = response.data.map(normalizeChat);
+        const chatsWithLastMessages = await Promise.all(
+          normalizedChats.map(async (chat) => {
+            if (chat.lastMessage) return chat;
+
+            try {
+              const messagesResponse = await api.get<MessageApiResponse[]>(
+                `/chats/${chat.id}/messages`
+              );
+
+              return {
+                ...chat,
+                lastMessage: getLastMessage(messagesResponse.data),
+              };
+            } catch (err) {
+              console.error(`Failed to fetch last message for chat ${chat.id}:`, err);
+              return chat;
+            }
+          })
+        );
+
+        setChats(chatsWithLastMessages);
+      } catch (err) {
+        console.error('Failed to fetch chats:', err);
+        setError('לא הצלחנו לטעון את השיחות');
+        setChats(MOCK_CHATS); // fallback זמני
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchChats();
+  }, []);
+
+  useEffect(() => {
+    function handleNewMessage(message: {
+      chatId: number;
+      content: string;
+      createdAt: string | Date;
+    }) {
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === message.chatId
+            ? {
+                ...chat,
+                lastMessage: message.content,
+                updatedAt: new Date(message.createdAt),
+              }
+            : chat
+        )
+      );
+    }
+
+    socket.on('new_message', handleNewMessage);
+
+    return () => {
+      socket.off('new_message', handleNewMessage);
+    };
+  }, []);
 
   const sortedChats = useMemo(
     () => [...chats].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
@@ -331,16 +414,17 @@ export default function ChatList({ chats = MOCK_CHATS }: ChatListProps) {
     const query = search.trim().toLowerCase();
     if (!query) return sortedChats;
 
-    return sortedChats.filter(({ otherUser, request }) => {
+    return sortedChats.filter(({ otherUser, request, lastMessage }) => {
       return (
         otherUser.name.toLowerCase().includes(query) ||
-        (request?.title.toLowerCase().includes(query) ?? false)
+        (request?.title.toLowerCase().includes(query) ?? false) ||
+        (lastMessage?.toLowerCase().includes(query) ?? false)
       );
     });
   }, [sortedChats, search]);
 
   const handleSelect = useCallback(
-    (chat: Chat) => {
+    (chat: ChatWithLastMessage) => {
       setSelectedId(chat.id);
       navigate(`/chats/${chat.id}`);
     },
@@ -415,39 +499,49 @@ export default function ChatList({ chats = MOCK_CHATS }: ChatListProps) {
           </div>
         </header>
 
-        <ul
-          aria-label="שיחות"
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            margin: 0,
-            padding: 0,
-            background: '#ffffff',
-          }}
-        >
-          {filteredChats.length === 0 ? (
-            <li
-              style={{
-                textAlign: 'center',
-                padding: '56px 20px',
-                color: '#7a7974',
-                fontSize: 14,
-                listStyle: 'none',
-              }}
-            >
-              לא נמצאו שיחות
-            </li>
-          ) : (
-            filteredChats.map((chat) => (
-              <ChatItem
-                key={chat.id}
-                chat={chat}
-                isSelected={selectedId === chat.id}
-                onClick={() => handleSelect(chat)}
-              />
-            ))
-          )}
-        </ul>
+        {isLoading ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#7a7974' }}>
+            טוען שיחות...
+          </div>
+        ) : error && chats.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', color: '#a13544' }}>
+            {error}
+          </div>
+        ) : (
+          <ul
+            aria-label="שיחות"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              margin: 0,
+              padding: 0,
+              background: '#ffffff',
+            }}
+          >
+            {filteredChats.length === 0 ? (
+              <li
+                style={{
+                  textAlign: 'center',
+                  padding: '56px 20px',
+                  color: '#7a7974',
+                  fontSize: 14,
+                  listStyle: 'none',
+                }}
+              >
+                לא נמצאו שיחות
+              </li>
+            ) : (
+              filteredChats.map((chat) => (
+                <ChatItem
+                  key={chat.id}
+                  chat={chat}
+                  isSelected={selectedId === chat.id}
+                  onClick={() => handleSelect(chat)}
+                />
+              ))
+            )}
+          </ul>
+        )}
       </section>
     </div>
   );
