@@ -402,7 +402,18 @@ export default function AnnouncementsList() {
         setShowCreateForm(false);
       } catch (err) {
         console.error('Failed to publish announcement:', err);
-        setError('לא הצלחנו לפרסם את המודעה');
+        const responseError = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+        if (responseError === 'house_committee access or higher required') {
+          setError(
+            user.role === 'area_manager' || user.role === 'house_committee'
+              ? 'ההרשאה בטוקן לא מעודכנת. התנתק והתחבר שוב ואז נסה לפרסם מודעה.'
+              : 'רק וועד הבית יכול לפרסם מודעה חדשה'
+          );
+        } else if (responseError) {
+          setError(responseError);
+        } else {
+          setError('לא הצלחנו לפרסם את המודעה');
+        }
       } finally {
         setIsPublishing(false);
       }
