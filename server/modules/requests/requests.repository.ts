@@ -6,7 +6,7 @@ class RequestsRepository {
 
     getRequesterByRequestId = async (requestId: number) => {
         try {
-            const result = await pool.query<{ requesterId: number }>
+            const result = await pool.query<{ user_id: number }>
                 (
                     GET_REQUESTER_ID, [requestId]
                 );

@@ -29,9 +29,9 @@ class RequestController {
             let query = `
                 SELECT *
                 FROM (
-                    SELECT 
-                    r.*, 
-                    u.name as user_name, 
+                    SELECT
+                    r.*,
+                    u.name as user_name,
                     u.avatar_url,
                     (
                         6371 * 2 * asin(
