@@ -5,8 +5,8 @@ class RequestsService {
 
     getRequesterByRequestId = async (requestId: number) => {
         try {
-            const { requesterId } = await requestsRepository.getRequesterByRequestId(requestId);
-            return requesterId;
+            const { user_id } = await requestsRepository.getRequesterByRequestId(requestId);
+            return user_id;
         } catch (error) {
             console.error('error in newRequestChat:', error, 'layer: service');
             throw error;

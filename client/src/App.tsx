@@ -17,7 +17,8 @@ import AdminDashboard from './pages/AdminDashboard';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 

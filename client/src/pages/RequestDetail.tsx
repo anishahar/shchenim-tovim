@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
+import { useAuth } from "../AuthContext";
 import { socket } from "../socket";
 // import {Request} from "@typesLib"
 
@@ -25,6 +26,25 @@ export default function RequestDetail() {
   const [loading, setLoading] = useState<boolean>(true);
   const [startingChat, setStartingChat] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+
+  //const navigate = useNavigate();
+
+  const { user } = useAuth();
+  console.log("Current user id:", user?.id);
+  console.log("Current user name:", user?.name); 
+
+  //Delete request
+  function handleDelete() {
+    api.delete(`/requests/${id}`)
+      .then(()  => {
+        alert("הבקשה נמחקה בהצלחה");
+        navigate(`/requests`)
+      })
+      .catch((error) => {
+        console.error("Error deleting request:", error);
+        alert("אירעה שגיאה בעת מחיקת הבקשה");
+      });
+  }
 
   useEffect(() => {
     if (id) {
@@ -141,6 +161,9 @@ export default function RequestDetail() {
             {request.created_at && (
               <span>🕐 {new Date(request.created_at).toLocaleDateString('he-IL')}</span>
             )}
+            <span>
+             פורסם על ידי: {request.user_name}
+                  </span>
           </div>
           {request.image_url && (
             <div className="mb-6">
@@ -154,13 +177,24 @@ export default function RequestDetail() {
           {chatError && (
             <p className="text-sm text-red-600 mb-3 text-center">{chatError}</p>
           )}
-          <button
-            onClick={handleHelpClick}
-            disabled={startingChat}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-colors"
-          >
-            {startingChat ? 'פותח צ׳אט...' : 'אני אעזור'}
-          </button>
+          {user?.id !== request.user_id ? (
+            <>
+              {chatError && (
+                <p className="text-sm text-red-600 mb-3 text-center">{chatError}</p>
+              )}
+              <button
+                onClick={handleHelpClick}
+                disabled={startingChat}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-colors"
+              >
+                {startingChat ? 'פותח צ׳אט...' : 'אני אעזור'}
+              </button>
+            </>
+          ) : (
+            <button onClick={handleDelete} className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
+              מחק
+            </button>
+          )}
 
         </div>
       </div>
