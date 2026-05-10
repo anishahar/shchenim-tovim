@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import api from "../api";
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 
 
 export default function RequestsList() {
@@ -13,6 +14,10 @@ export default function RequestsList() {
   const [urgencyFilter, setUrgencyFilter] = useState<string>("");
   const [radiusFilter, setRadiusFilter] = useState<number>(0);
   const [userCoords, setUserCoords] = useState<userCords | null>(null);
+
+  //Get current user from context
+  const { user } = useAuth();
+
   //for navigation to request details page on marker click
   const navigate = useNavigate();
   //listen to google maps api load
@@ -50,9 +55,6 @@ export default function RequestsList() {
     console.log("userCoords updated:", userCoords);
   }, [userCoords]);
 
-
-
-  const mapContainerStyle = { width: '100%', height: '500px' };
   const center = { lat: userCoords ? userCoords.userLat : 31.117, lng: userCoords ? userCoords.userLng : 35.0818 }; //Users location or center of tel aviv
 
 
@@ -91,6 +93,10 @@ export default function RequestsList() {
   const normalizedFilter = textFilter.trim().toLowerCase();
 
   const filteredRequests = requests.filter((request) => {
+    if(user?.id === request.user?.id) {
+      //Dont show requests created by the current user in the list, they can see them in their profile page
+      return false;
+    }
     const matchesText = !normalizedFilter ||
       [request.title, request.description, request.location_text, request.category, request.user?.name]
         .filter(Boolean)
@@ -170,6 +176,15 @@ export default function RequestsList() {
                 <option value="pet_care">טיפול בחיות</option>
                 <option value="other">אחר</option>
               </select>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <button
+                onClick={() => navigate("/requests/new")}
+                className="w-full sm:w-auto bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors"
+              >
+                בקשה חדשה
+              </button>
             </div>
 
             {loading ? (

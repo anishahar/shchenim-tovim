@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { chatsService } from './chats.service.js';
-import { getMessagesSchema } from './chats.validation.js';
+import { getMessagesSchema, updateLastReadTimeSchema } from './chats.validation.js';
 
 class ChatsController {
     getUserChats = async (req: Request, res: Response) => {
@@ -76,6 +76,26 @@ class ChatsController {
         catch (error) {
             console.error('error in getting chat messages:', error);
             res.status(500).json({ error: 'getting chat messages' });
+
+        }
+    }
+
+    updateLastReadTime = async (req: Request, res: Response) => {
+        const { data, error } = updateLastReadTimeSchema.safeParse(req);
+
+        if (error) return res.status(400).json({ errors: error });
+        const chatId = data.chatId;
+
+        if (!req.user) return res.status(401);
+        const userId = req.user.id;
+
+        try {
+            await chatsService.updateLastReadTime(chatId, userId);
+            return res.status(200);
+        }
+        catch (error) {
+            console.error('error in updateLastReadTime:', error);
+            res.status(500).json({ error: error });
 
         }
     }

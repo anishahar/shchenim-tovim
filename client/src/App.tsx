@@ -9,7 +9,6 @@ import Register from './pages/Register';
 import RequestsList from './pages/RequestsList';
 import CreateRequest from './pages/CreateRequest';
 import RequestDetail from './pages/RequestDetail';
-import MapView from './pages/MapView';
 import ChatList from './pages/ChatList';
 import ChatRoom from './pages/ChatRoom';
 import AnnouncementsList from './pages/AnnouncementsList';
@@ -18,7 +17,8 @@ import AdminDashboard from './pages/AdminDashboard';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
@@ -43,7 +43,6 @@ function App() {
           <Route path="/requests" element={<ProtectedRoute><RequestsList /></ProtectedRoute>} />
           <Route path="/requests/new" element={<ProtectedRoute><CreateRequest /></ProtectedRoute>} />
           <Route path="/requests/:id" element={<ProtectedRoute><RequestDetail /></ProtectedRoute>} />
-          <Route path="/map" element={<ProtectedRoute><MapView /></ProtectedRoute>} />
           <Route path="/chats" element={<ProtectedRoute><ChatList /></ProtectedRoute>} />
           <Route path="/chats/:id" element={<ProtectedRoute><ChatRoom /></ProtectedRoute>} />
           <Route path="/announcements" element={<ProtectedRoute><AnnouncementsList /></ProtectedRoute>} />

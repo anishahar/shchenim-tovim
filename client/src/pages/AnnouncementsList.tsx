@@ -1,43 +1,27 @@
-import { memo, useCallback, useMemo, useState } from 'react';
-import type { Announcement, User } from '@typesLib';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import type { Announcement } from '@typesLib';
+import api from '../api';
+import { useAuth } from '../AuthContext';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type CurrentUser = Pick<User, 'id' | 'name' | 'role'>;
-
-// ─── Mock Data (UI only) ──────────────────────────────────────────────────────
-
-const MOCK_CURRENT_USER: CurrentUser = {
-  id: 1,
-  name: 'מנהל מערכת',
-  role: 'area_manager',
+type AnnouncementApiResponse = Omit<Announcement, 'createdAt'> & {
+  createdAt?: string;
+  created_at?: string;
 };
 
-const MOCK_ANNOUNCEMENTS: Announcement[] = [
-  {
-    id: 1,
-    title: 'ניקיון חדר מדרגות',
-    content: 'מחר בשעה 10:00 יבוצע ניקיון בחדר המדרגות. נשמח לשיתוף פעולה של כולם.',
-    author: { id: 1, name: 'ועד הבית' },
-    createdAt: new Date('2026-04-09T09:30:00'),
-  },
-  {
-    id: 2,
-    title: 'הפסקת מים זמנית',
-    content: 'ביום ראשון בין השעות 12:00–14:00 תהיה הפסקת מים זמנית לצורך תיקון בצנרת.',
-    author: { id: 1, name: 'מנהל אזור' },
-    createdAt: new Date('2026-04-08T18:15:00'),
-  },
-  {
-    id: 3,
-    title: 'חניה פנויה להשכרה',
-    content: 'יש חניה פנויה להשכרה בבניין. מי שמעוניין מוזמן לפנות אליי בפרטי.',
-    author: { id: 2, name: 'יוסי לוי' },
-    createdAt: new Date('2026-04-07T14:00:00'),
-  },
-];
+type CreateAnnouncementResponse = {
+  id: number;
+  title: string;
+  content: string;
+  createdAt?: string;
+  created_at?: string;
+};
 
-// ─── Pure Utilities ───────────────────────────────────────────────────────────
+function normalizeAnnouncement(announcement: AnnouncementApiResponse): Announcement {
+  return {
+    ...announcement,
+    createdAt: new Date(announcement.createdAt ?? announcement.created_at ?? Date.now()),
+  };
+}
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('he-IL', {
@@ -60,8 +44,6 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .toUpperCase();
 }
-
-// ─── Sub-Components ───────────────────────────────────────────────────────────
 
 function SearchIcon() {
   return (
@@ -87,13 +69,7 @@ function SearchIcon() {
   );
 }
 
-// ─── AuthorAvatar ─────────────────────────────────────────────────────────────
-
-interface AuthorAvatarProps {
-  name: string;
-}
-
-function AuthorAvatar({ name }: AuthorAvatarProps) {
+function AuthorAvatar({ name }: { name: string }) {
   return (
     <div
       aria-hidden
@@ -117,25 +93,20 @@ function AuthorAvatar({ name }: AuthorAvatarProps) {
   );
 }
 
-// ─── AnnouncementCard ─────────────────────────────────────────────────────────
-
 interface AnnouncementCardProps {
   announcement: Announcement;
-  currentUser: CurrentUser;
+  canDelete: boolean;
+  isDeleting: boolean;
   onDelete: (id: number) => void;
 }
 
 const AnnouncementCard = memo(function AnnouncementCard({
   announcement,
-  currentUser,
-  onDelete
+  canDelete,
+  isDeleting,
+  onDelete,
 }: AnnouncementCardProps) {
   const { title, content, author, createdAt } = announcement;
-
-  // Check if user can delete this announcement
-  const isOwner = announcement.author.id === currentUser.id;
-  const isAreaManager = currentUser.role === 'area_manager';
-  const canDelete = isAreaManager || (currentUser.role === 'house_committee' && isOwner);
 
   return (
     <article
@@ -206,32 +177,23 @@ const AnnouncementCard = memo(function AnnouncementCard({
         {content}
       </p>
 
-      {/* Delete button - shown only to authorized users */}
       {canDelete && (
         <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-start' }}>
           <button
             onClick={() => onDelete(announcement.id)}
+            disabled={isDeleting}
             style={{
               border: '1px solid rgba(220,38,38,0.3)',
               background: 'transparent',
               color: '#dc2626',
               padding: '8px 14px',
               borderRadius: 10,
-              cursor: 'pointer',
+              cursor: isDeleting ? 'wait' : 'pointer',
               fontWeight: 600,
               fontSize: 13,
-              transition: 'all 140ms ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#dc2626';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#dc2626';
             }}
           >
-            מחק מודעה
+            {isDeleting ? 'מוחק...' : 'מחק מודעה'}
           </button>
         </div>
       )}
@@ -239,18 +201,17 @@ const AnnouncementCard = memo(function AnnouncementCard({
   );
 });
 
-// ─── CreateAnnouncementForm ───────────────────────────────────────────────────
-
 interface CreateAnnouncementFormProps {
+  isPublishing: boolean;
   onClose: () => void;
   onPublish: (title: string, content: string) => void;
 }
 
-function CreateAnnouncementForm({ onClose, onPublish }: CreateAnnouncementFormProps) {
+function CreateAnnouncementForm({ isPublishing, onClose, onPublish }: CreateAnnouncementFormProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
 
-  const canPublish = title.trim().length > 0 && content.trim().length > 0;
+  const canPublish = title.trim().length > 0 && content.trim().length > 0 && !isPublishing;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -289,29 +250,23 @@ function CreateAnnouncementForm({ onClose, onPublish }: CreateAnnouncementFormPr
       </h2>
 
       <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="sr-only">כותרת המודעה</span>
-          <input
-            type="text"
-            placeholder="כותרת המודעה"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            style={fieldStyle}
-          />
-        </label>
+        <input
+          type="text"
+          placeholder="כותרת המודעה"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          style={fieldStyle}
+        />
 
-        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span className="sr-only">תוכן המודעה</span>
-          <textarea
-            placeholder="תוכן המודעה"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={5}
-            required
-            style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'inherit' }}
-          />
-        </label>
+        <textarea
+          placeholder="תוכן המודעה"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          rows={5}
+          required
+          style={{ ...fieldStyle, resize: 'vertical', fontFamily: 'inherit' }}
+        />
 
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-start' }}>
           <button
@@ -326,22 +281,22 @@ function CreateAnnouncementForm({ onClose, onPublish }: CreateAnnouncementFormPr
               cursor: canPublish ? 'pointer' : 'not-allowed',
               fontWeight: 700,
               fontSize: 14,
-              transition: 'background 140ms ease',
             }}
           >
-            פרסם
+            {isPublishing ? 'מפרסם...' : 'פרסם'}
           </button>
 
           <button
             type="button"
             onClick={onClose}
+            disabled={isPublishing}
             style={{
               border: '1px solid rgba(40,37,29,0.14)',
               background: 'transparent',
               color: '#5e5a53',
               padding: '11px 18px',
               borderRadius: 12,
-              cursor: 'pointer',
+              cursor: isPublishing ? 'not-allowed' : 'pointer',
               fontWeight: 700,
               fontSize: 14,
             }}
@@ -353,8 +308,6 @@ function CreateAnnouncementForm({ onClose, onPublish }: CreateAnnouncementFormPr
     </section>
   );
 }
-
-// ─── EmptyState ───────────────────────────────────────────────────────────────
 
 function EmptyState() {
   return (
@@ -376,23 +329,35 @@ function EmptyState() {
   );
 }
 
-// ─── AnnouncementsList ────────────────────────────────────────────────────────
-
-interface AnnouncementsListProps {
-  announcements?: Announcement[];
-  currentUser?: CurrentUser;
-}
-
-export default function AnnouncementsList({
-  announcements = MOCK_ANNOUNCEMENTS,
-  currentUser = MOCK_CURRENT_USER,
-}: AnnouncementsListProps) {
+export default function AnnouncementsList() {
+  const { user } = useAuth();
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [search, setSearch] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Can create announcements: house_committee or area_manager
-  const canCreateAnnouncement =
-    currentUser.role === 'house_committee' || currentUser.role === 'area_manager';
+  const canCreateAnnouncement = !!user;
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await api.get<AnnouncementApiResponse[]>('/announcements');
+      setAnnouncements(response.data.map(normalizeAnnouncement));
+    } catch (err) {
+      console.error('Failed to fetch announcements:', err);
+      setError('לא הצלחנו לטעון את המודעות');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
   const sortedAnnouncements = useMemo(
     () => [...announcements].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
@@ -411,18 +376,64 @@ export default function AnnouncementsList({
     );
   }, [sortedAnnouncements, search]);
 
-  const handleCloseForm = useCallback(() => setShowCreateForm(false), []);
+  const handlePublish = useCallback(
+    async (title: string, content: string) => {
+      if (!user) return;
 
-  // In a real app this would call an API; for now it just closes the form.
-  const handlePublish = useCallback((_title: string, _content: string) => {
-    setShowCreateForm(false);
-  }, []);
+      try {
+        setIsPublishing(true);
+        setError(null);
+        const response = await api.post<CreateAnnouncementResponse>('/announcements', {
+          title,
+          content,
+        });
 
-  // In a real app this would call DELETE /api/announcements/:id
-  const handleDelete = useCallback((id: number) => {
-    if (confirm('האם אתה בטוח שברצונך למחוק את המודעה?')) {
-      console.log('Deleting announcement:', id);
-      // API call would go here
+        const created = response.data;
+        setAnnouncements((prev) => [
+          {
+            id: created.id,
+            title: created.title,
+            content: created.content,
+            author: { id: user.id, name: user.name },
+            createdAt: new Date(created.createdAt ?? created.created_at ?? Date.now()),
+          },
+          ...prev,
+        ]);
+        setShowCreateForm(false);
+      } catch (err) {
+        console.error('Failed to publish announcement:', err);
+        const responseError = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
+        if (responseError === 'house_committee access or higher required') {
+          setError(
+            user.role === 'area_manager' || user.role === 'house_committee'
+              ? 'ההרשאה בטוקן לא מעודכנת. התנתק והתחבר שוב ואז נסה לפרסם מודעה.'
+              : 'רק וועד הבית יכול לפרסם מודעה חדשה'
+          );
+        } else if (responseError) {
+          setError(responseError);
+        } else {
+          setError('לא הצלחנו לפרסם את המודעה');
+        }
+      } finally {
+        setIsPublishing(false);
+      }
+    },
+    [user],
+  );
+
+  const handleDelete = useCallback(async (id: number) => {
+    if (!confirm('האם אתה בטוח שברצונך למחוק את המודעה?')) return;
+
+    try {
+      setDeletingId(id);
+      setError(null);
+      await api.delete(`/announcements/${id}`);
+      setAnnouncements((prev) => prev.filter((announcement) => announcement.id !== id));
+    } catch (err) {
+      console.error('Failed to delete announcement:', err);
+      setError('לא הצלחנו למחוק את המודעה');
+    } finally {
+      setDeletingId(null);
     }
   }, []);
 
@@ -448,7 +459,6 @@ export default function AnnouncementsList({
           gap: 18,
         }}
       >
-        {/* ── Page Header ── */}
         <header
           style={{
             background: '#ffffff',
@@ -537,26 +547,53 @@ export default function AnnouncementsList({
           </div>
         </header>
 
-        {/* ── Create Form (house committee & area manager) ── */}
-        {canCreateAnnouncement && showCreateForm && (
-          <div id="create-announcement-form">
-            <CreateAnnouncementForm onClose={handleCloseForm} onPublish={handlePublish} />
+        {error && (
+          <div
+            role="alert"
+            style={{
+              background: '#fff4e5',
+              color: '#8a4b00',
+              border: '1px solid rgba(138,75,0,0.15)',
+              borderRadius: 12,
+              padding: '10px 14px',
+              fontSize: 14,
+            }}
+          >
+            {error}
           </div>
         )}
 
-        {/* ── Announcements Feed ── */}
+        {canCreateAnnouncement && showCreateForm && (
+          <div id="create-announcement-form">
+            <CreateAnnouncementForm
+              isPublishing={isPublishing}
+              onClose={() => setShowCreateForm(false)}
+              onPublish={handlePublish}
+            />
+          </div>
+        )}
+
         <section aria-label="רשימת מודעות" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {filteredAnnouncements.length === 0 ? (
+          {isLoading ? (
+            <div style={{ textAlign: 'center', color: '#7a7974' }}>טוען מודעות...</div>
+          ) : filteredAnnouncements.length === 0 ? (
             <EmptyState />
           ) : (
-            filteredAnnouncements.map((announcement) => (
-              <AnnouncementCard
-                key={announcement.id}
-                announcement={announcement}
-                currentUser={currentUser}
-                onDelete={handleDelete}
-              />
-            ))
+            filteredAnnouncements.map((announcement) => {
+              const canDelete =
+                user?.role === 'area_manager' ||
+                (user?.role === 'house_committee' && announcement.author.id === user.id);
+
+              return (
+                <AnnouncementCard
+                  key={announcement.id}
+                  announcement={announcement}
+                  canDelete={canDelete}
+                  isDeleting={deletingId === announcement.id}
+                  onDelete={handleDelete}
+                />
+              );
+            })
           )}
         </section>
       </section>

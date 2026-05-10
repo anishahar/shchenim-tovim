@@ -6,12 +6,12 @@ class RequestsRepository {
 
     getRequesterByRequestId = async (requestId: number) => {
         try {
-            const result = await pool.query<{ requesterId: number }>
+            const result = await pool.query<{ user_id: number }>
                 (
                     GET_REQUESTER_ID, [requestId]
                 );
             if (result.rows.length === 0) throw new Error("request id does not exist");
-            return result.rows[0];
+            return result.rows[0]
         } catch (error) {
             console.error('error in getRequesterByRequestId:', error, 'layer: repository');
             throw error;

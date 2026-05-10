@@ -17,12 +17,12 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(50) DEFAULT 'resident',
   avatar_url TEXT,
   phone VARCHAR(50),
-  address_text TEXT,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
-  city VARCHAR(100),
-  street VARCHAR(100),
-  street_number VARCHAR(20),
+  address_text TEXT NOT NULL,
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  street VARCHAR(100) NOT NULL,
+  street_number VARCHAR(20) NOT NULL,
   apartment VARCHAR(20),
   is_blocked BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT NOW(),
@@ -51,7 +51,9 @@ CREATE TABLE IF NOT EXISTS chats (
   user1_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   user2_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP
+  updated_at TIMESTAMP,
+  last_read_at1 TIMESTAMP NOT NULL DEFAULT NOW(),
+  last_read_at2 TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS messages (

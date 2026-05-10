@@ -1,16 +1,33 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../api";
 import { useAuth } from "../AuthContext";
-import { useNavigate } from "react-router-dom";
+import { socket } from "../socket";
 // import {Request} from "@typesLib"
+
+type SocketAck = {
+  ok: boolean;
+  error?: string;
+};
+
+type ChatApiResponse = {
+  id: number;
+  request: {
+    id: number;
+  } | null;
+};
+
+const HELP_MESSAGE = "היי, אני יכול לעזור";
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [startingChat, setStartingChat] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
-  const navigate = useNavigate();
+  //const navigate = useNavigate();
 
   const { user } = useAuth();
   console.log("Current user id:", user?.id);
@@ -39,9 +56,73 @@ export default function RequestDetail() {
         .catch((error) => {
           console.error("Error fetching request:", error);
           setLoading(false);
-        });
+      });
     }
   }, [id]);
+
+  async function findRequestChat(requestId: number) {
+    const response = await api.get<ChatApiResponse[]>('/chats');
+    return response.data.find((chat) => chat.request?.id === requestId);
+  }
+
+  async function handleHelpClick() {
+    const requestId = Number(id);
+
+    if (!requestId || Number.isNaN(requestId)) {
+      setChatError('בקשה לא תקינה');
+      return;
+    }
+
+    if (!socket.connected) {
+      setChatError('אין חיבור לצ׳אט');
+      return;
+    }
+
+    try {
+      setStartingChat(true);
+      setChatError(null);
+
+      const existingChat = await findRequestChat(requestId);
+      if (existingChat) {
+        navigate(`/chats/${existingChat.id}`);
+        return;
+      }
+
+      socket.emit(
+        'first_request_message',
+        {
+          requestId,
+          content: HELP_MESSAGE,
+        },
+        async (response: SocketAck) => {
+          if (!response?.ok) {
+            setStartingChat(false);
+            setChatError(response?.error || 'פתיחת הצ׳אט נכשלה');
+            return;
+          }
+
+          try {
+            const chat = await findRequestChat(requestId);
+            if (!chat) {
+              setChatError('הצ׳אט נפתח, אבל לא הצלחנו למצוא אותו ברשימת השיחות');
+              setStartingChat(false);
+              return;
+            }
+
+            navigate(`/chats/${chat.id}`);
+          } catch (error) {
+            console.error('Failed to find created chat:', error);
+            setChatError('הצ׳אט נפתח, אבל לא הצלחנו לפתוח אותו');
+            setStartingChat(false);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Failed to start request chat:', error);
+      setChatError('פתיחת הצ׳אט נכשלה');
+      setStartingChat(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -93,16 +174,27 @@ export default function RequestDetail() {
               />
             </div>
           )}
-        { user?.id !== request.user_id  ? (
-          <button  onClick={() => {/* handle help action */}} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
-            אני אעזור
-          </button>
-          ): (
-            <button  onClick={handleDelete} className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
-           מחק
-          </button>
-          )
-        }
+          {chatError && (
+            <p className="text-sm text-red-600 mb-3 text-center">{chatError}</p>
+          )}
+          {user?.id !== request.user_id ? (
+            <>
+              {chatError && (
+                <p className="text-sm text-red-600 mb-3 text-center">{chatError}</p>
+              )}
+              <button
+                onClick={handleHelpClick}
+                disabled={startingChat}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-colors"
+              >
+                {startingChat ? 'פותח צ׳אט...' : 'אני אעזור'}
+              </button>
+            </>
+          ) : (
+            <button onClick={handleDelete} className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
+              מחק
+            </button>
+          )}
 
         </div>
       </div>

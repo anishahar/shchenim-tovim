@@ -59,12 +59,40 @@ export const IS_USER_MEMBER_IN_CHAT = `
 
 export const SEND_MESSAGE = `
     INSERT INTO messages (chat_id, sender_id, content)
-    VALUES ($1, $2, $3) 
+    VALUES ($1, $2, $3)
     RETURNING created_at as "createdAt";
 `;
 
 export const UPDATE_CHAT_TIMESTAMP = `
     UPDATE chats
-    SET updated_at = $2 
+    SET updated_at = $2
     WHERE id = $1;
 `;
+
+export const UPDATE_LAST_READ_TIMESTAMP = `
+    UPDATE chats
+    SET
+    last_read_at1 = CASE
+        WHEN user1_id = $1 THEN NOW()
+        ELSE last_read_at1
+    END,
+    last_read_at2 = CASE
+        WHEN user2_id = $1 THEN NOW()
+        ELSE last_read_at2
+    END
+    WHERE id = $2;
+`;
+
+export const GET_UNREAD_MESSAGES_AMOUNT = `
+    SELECT COUNT(*) AS "unreadMessages"
+    FROM messages m
+    JOIN chats c ON c.id = m.chat_id
+    WHERE c.id = $1
+    AND (
+        (c.user1_id = $2 AND m.created_at > c.last_read_at1)
+        OR
+        (c.user2_id = $2 AND m.created_at > c.last_read_at2)
+    )
+    AND m.sender_id != $2;
+`;
+
