@@ -26,6 +26,26 @@ class RequestController {
             const { longitude, latitude } = await usersService.getUserDetails(userId);
             if (longitude === null || latitude === null) return res.status(400).json({ error: 'user needs a home location' }); ////////////////// its needs to be NOT NULL.... when we refactor this to use types ill remove this check
 
+            const distanceSql = (
+                fromLat: string,
+                fromLng: string,
+                toLat: string,
+                toLng: string,
+            ) => {
+                return `
+                (
+                    6371 * 2 * asin(
+                        sqrt(
+                        pow(sin(radians((${fromLat} - ${toLat}) / 2)), 2) +
+                        cos(radians(${toLat})) *
+                        cos(radians(${fromLat})) *
+                        pow(sin(radians((${fromLng} - ${toLng}) / 2)), 2)
+                        )
+                    )
+                )
+            `;
+            }
+
             let query = `
                 SELECT *
                 FROM (
@@ -34,22 +54,15 @@ class RequestController {
                     u.name as user_name,
                     u.avatar_url,
                     (
-                        6371 * 2 * asin(
-                        sqrt(
-                            pow(sin(radians(($1 - r.latitude) / 2)), 2) +
-                            cos(radians(r.latitude)) *
-                            cos(radians($1)) *
-                            pow(sin(radians(($2 - r.longitude) / 2)), 2)
-                        )
-                        )
+                     ${distanceSql("$1", "$2", "r.latitude", "r.longitude")}
                     ) AS distance
                     FROM requests r
                     JOIN users u ON r.user_id = u.id
-                    WHERE r.status != 'completed'
+                    WHERE r.status != 'completed' AND r.user_id != $3
                 ) t
-                WHERE t.distance < $3
+                WHERE t.distance < $4
                 `;
-            let params: (string | number)[] = [latitude, longitude, radius];
+            let params: (string | number)[] = [latitude, longitude, userId, radius];
 
             if (category) {
                 params.push(category);

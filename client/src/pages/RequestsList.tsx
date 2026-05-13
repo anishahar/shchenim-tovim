@@ -12,11 +12,25 @@ export default function RequestsList() {
   const [textFilter, setTextFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("");
-  const [radiusFilter, setRadiusFilter] = useState<number>(0);
+  const [radiusFilter, setRadiusFilter] = useState<number>(50);
   const [userCoords, setUserCoords] = useState<userCords | null>(null);
 
   //Get current user from context
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchHomeLocation = async () => {
+      const response = await api.get(`/users/${user.id}`);
+
+      const { latitude, longitude } = response.data;
+
+      setUserCoords({ userLat: Number(latitude), userLng: Number(longitude) });
+    };
+
+    fetchHomeLocation();
+  }, [user]);
 
   //for navigation to request details page on marker click
   const navigate = useNavigate();
@@ -30,37 +44,39 @@ export default function RequestsList() {
     userLat: number;
     userLng: number;
   }
-  //Get user coordinates on component mount only
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
-          setUserCoords({
-            userLat: position.coords.latitude,
-            userLng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-        }
-      );
-    } else {
-      console.error("Geolocation not supported");
-    }
-  }, []);
+  // //Get user coordinates on component mount only
+  // useEffect(() => {
+  //   if (navigator.geolocation) {
+  //     navigator.geolocation.getCurrentPosition(
+  //       (position) => {
+  //         console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
+  //         setUserCoords({
+  //           userLat: position.coords.latitude,
+  //           userLng: position.coords.longitude,
+  //         });
+  //       },
+  //       (error) => {
+  //         console.error("Geolocation error:", error);
+  //       }
+  //     );
+  //   } else {
+  //     console.error("Geolocation not supported");
+  //   }
+  // }, []);
 
-  // Log when userCoords updates
-  useEffect(() => {
-    console.log("userCoords updated:", userCoords);
-  }, [userCoords]);
+  // // Log when userCoords updates
+  // useEffect(() => {
+  //   console.log("userCoords updated:", userCoords);
+  // }, [userCoords]);
 
   const center = { lat: userCoords ? userCoords.userLat : 31.117, lng: userCoords ? userCoords.userLng : 35.0818 }; //Users location or center of tel aviv
 
 
   useEffect(() => {
-    api.get("/requests", { params: { 
-      radius: 50000 } 
+    api.get("/requests", {
+      params: {
+        radius: radiusFilter
+      }
     })
       .then((response) => {
         setRequests(response.data.data);
@@ -70,33 +86,29 @@ export default function RequestsList() {
         console.error("Error fetching requests:", error);
         setLoading(false);
       });
-  }, []);
+  }, [radiusFilter]);
 
-  //Calculate distance between two coordinates using Haversine formula
-  function toRadians(deg: number) {
-    return (deg * Math.PI) / 180;
-  }
+  // // Calculate distance between two coordinates using Haversine formula
+  // function toRadians(deg: number) {
+  //   return (deg * Math.PI) / 180;
+  // }
 
-  function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-    const R = 6371; // Earth radius in km
-    const dLat = toRadians(lat2 - lat1);
-    const dLng = toRadians(lng2 - lng1);
+  // function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  //   const R = 6371; // Earth radius in km
+  //   const dLat = toRadians(lat2 - lat1);
+  //   const dLng = toRadians(lng2 - lng1);
 
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
+  //   const a =
+  //     Math.sin(dLat / 2) ** 2 +
+  //     Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
 
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  }
+  //   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  // }
 
   //Filter based on text
   const normalizedFilter = textFilter.trim().toLowerCase();
 
   const filteredRequests = requests.filter((request) => {
-    if(user?.id === request.user?.id) {
-      //Dont show requests created by the current user in the list, they can see them in their profile page
-      return false;
-    }
     const matchesText = !normalizedFilter ||
       [request.title, request.description, request.location_text, request.category, request.user?.name]
         .filter(Boolean)
@@ -108,15 +120,15 @@ export default function RequestsList() {
     //Filter based on category
     const matchesCategory = !categoryFilter || request.category === categoryFilter;
     //Filter based on radius
-    const matchesRadius = !radiusFilter || !userCoords ||
-      distanceKm(
-        userCoords.userLat,
-        userCoords.userLng,
-        Number(request.latitude),
-        Number(request.longitude)
-      ) <= radiusFilter;
+    // const matchesRadius = !radiusFilter || !userCoords ||
+    //   distanceKm(
+    //     userCoords.userLat,
+    //     userCoords.userLng,
+    //     Number(request.latitude),
+    //     Number(request.longitude)
+    //   ) <= radiusFilter;
 
-    return matchesText && matchesUrgency && matchesCategory && matchesRadius;
+    return matchesText && matchesUrgency && matchesCategory;
   });
 
   //Map only requests with valid coordinates
@@ -130,7 +142,6 @@ export default function RequestsList() {
     .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
 
   //console.log("markers count:", markerRequests.length, markerRequests);
-
 
   return (
     <div className="flex gap-6" dir="ltr">
@@ -146,13 +157,39 @@ export default function RequestsList() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTextFilter(e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2"
               />
-              <input
-                type="number"
-                placeholder="רדיוס בקילומטרים"
-                value={radiusFilter > 0 ? radiusFilter : ""} //Show empty when radius is 0
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRadiusFilter(Number(e.target.value))}
-                className="w-full sm:w-48 border border-gray-300 rounded-lg px-3 py-2"
-              />
+              <div className="relative w-full sm:w-48">
+                <label
+                  className="
+                  absolute
+                  -top-2
+                  left-2
+                  bg-white
+                  px-1
+                  text-xs
+                  text-gray-500
+                "
+                >
+                  רדיוס בקילומטרים
+                </label>
+
+                <input
+                  type="number"
+                  value={radiusFilter}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setRadiusFilter(Number(e.target.value))
+                  }
+                  className="
+                    w-full 
+                    sm:w-48
+                    border
+                    border-gray-300
+                    rounded-lg      
+                    px-3
+                    py-2
+                    focus:border-gray-500
+                "
+                />
+              </div>
               <select
                 value={urgencyFilter}
                 onChange={(e) => setUrgencyFilter(e.target.value)}
@@ -232,8 +269,21 @@ export default function RequestsList() {
             <GoogleMap
               mapContainerStyle={{ width: '100%', height: '70vh', borderRadius: '8px' }}
               center={center}
-              zoom={8}
+              zoom={15}
             >
+              {userCoords && (
+                <Marker
+                  position={{ lat: userCoords.userLat, lng: userCoords.userLng }}
+                  title="Home"
+                  icon={{
+                    url: '/homeFavicon.svg',//////////////////
+                    scaledSize: new window.google.maps.Size(40, 40),
+                  }}
+                  options={{
+                    cursor: 'pointer',
+                  }}
+                />
+              )}
               {markerRequests.map((request) => (
                 <Marker
                   key={request.id}

@@ -7,6 +7,7 @@ export interface Chat {
     request: Pick<Request, 'id' | 'title' | 'imageUrl' | 'status'> | null;
     otherUser: Pick<User, 'id' | 'name' | 'avatarUrl'>;
     unreadMessagesAmount: number;
+    // lastMessage: string;
     createdAt: Date;
     updatedAt: Date;
 }
