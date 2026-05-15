@@ -5,7 +5,20 @@ import jwt from 'jsonwebtoken';
 import { authRepository } from './auth.repository.js';
 
 class AuthService {
-    register = async (name: string, email: string, password: string) => {
+    register = async (
+        name: string,
+        email: string,
+        password: string,
+        role: string,
+        phone: string,
+        addressText: string,
+        latitude: number,
+        longitude: number,
+        city?: string,
+        street?: string,
+        streetNumber?: string,
+        apartment?: string
+    ) => {
         try {
             const existingUser = await authRepository.findUser(email);
             if (existingUser) throw createError(400, 'User already exists');
@@ -13,8 +26,20 @@ class AuthService {
             // Hash password with bcrypt (10 rounds)
             const passwordHash = await bcrypt.hash(password, 10);
 
-            // currently we insert new users with role 'resident'
-            const user = await authRepository.insertResident(name, email, passwordHash);
+            const user = await authRepository.insertResident(
+                name,
+                email,
+                passwordHash,
+                role,
+                phone,
+                addressText,
+                latitude,
+                longitude,
+                city,
+                street,
+                streetNumber,
+                apartment
+            );
 
             // Create JWT token
             const token = jwt.sign(

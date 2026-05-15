@@ -1,11 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from './types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { socket } from './socket';
+import { User } from '@typesLib';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (updatedUser: Partial<User>) => void;
   isLoading: boolean;
 }
 
@@ -35,6 +37,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  useEffect(() => {
+    if (!token) {
+      socket.disconnect();
+      return;
+    }
+
+    socket.auth = { token };
+
+    socket.connect();
+    // registerSocketEvents();
+
+    return () => {
+      socket.off(); // check if its really needed
+    };
+  }, [token]);
+
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
@@ -49,8 +67,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('user');
   };
 
+  const updateUser = (updatedUser: Partial<User>) => {
+    if (user) {
+      const newUser = { ...user, ...updatedUser };
+      setUser(newUser);
+      localStorage.setItem('user', JSON.stringify(newUser));
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

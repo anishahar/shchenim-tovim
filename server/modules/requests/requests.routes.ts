@@ -1,5 +1,5 @@
-import express, { Router } from 'express';
-import { authenticateToken, requireRole } from '../../middleware.js';
+import { Router } from 'express';
+import { authenticateToken } from '../../middleware.js';
 import { requestController } from './requests.controller.js';
 
 

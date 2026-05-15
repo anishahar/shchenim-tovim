@@ -5,7 +5,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="bg-white shadow-md" dir="rtl">
+    <nav className=" sticky top-0 z-50 bg-white shadow-md" dir="rtl">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Title - Right side */}
@@ -22,12 +22,6 @@ export default function Navbar() {
               בקשות
             </Link>
             <Link
-              to="/map"
-              className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
-            >
-              מפה
-            </Link>
-            <Link
               to="/chats"
               className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
             >
@@ -40,10 +34,25 @@ export default function Navbar() {
               מודעות
             </Link>
 
+            {/* Admin Panel Link - Area Manager only */}
+            {user?.role === 'area_manager' && (
+              <Link
+                to="/admin"
+                className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              >
+                ניהול
+              </Link>
+            )}
+
             {/* Auth Section */}
             {user ? (
               <div className="flex items-center gap-4 mr-4 border-r border-gray-300 pr-4">
-                <span className="text-gray-700 font-medium">{user.name}</span>
+                <Link
+                  to="/profile"
+                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                >
+                  👤 {user.name}
+                </Link>
                 <button
                   onClick={logout}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"

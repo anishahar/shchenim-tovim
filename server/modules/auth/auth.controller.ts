@@ -9,9 +9,23 @@ class AuthController {
 
             if (error) { return res.status(400).json({ errors: error }); }
 
-            const { name, email, password } = data;
+            const { name, email, password, phone, address_text, latitude, longitude, city, street, street_number, apartment } = data;
 
-            const { token, user } = await authService.register(name, email, password);
+            // Always set new users as 'resident' - only area_manager can change roles
+            const { token, user } = await authService.register(
+                name,
+                email,
+                password,
+                'resident',
+                phone,
+                address_text,
+                latitude,
+                longitude,
+                city,
+                street,
+                street_number,
+                apartment
+            );
 
             res.status(201).json({
                 token,

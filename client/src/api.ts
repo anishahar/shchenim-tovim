@@ -21,15 +21,23 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for 401 handling
+// Response interceptor for 401/403 handling
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    // Handle authentication errors (401 = no token, 403 = invalid/expired token)
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      const errorMessage = error.response?.data?.error || '';
+      // Only auto-logout on authentication errors, not permission errors
+      if (
+        error.response.status === 401 ||
+        errorMessage.includes('Invalid or expired token') ||
+        errorMessage.includes('Access token required')
+      ) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

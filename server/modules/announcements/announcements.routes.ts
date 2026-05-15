@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, requireRole } from '../../middleware.js';
+import { authenticateToken, requireMinRole } from '../../middleware.js';
 import { announcementsController } from './announcements.controller.js';
 
 
@@ -7,4 +7,6 @@ export const announcementsRouter = Router();
 
 announcementsRouter.get('/', authenticateToken, announcementsController.getAnnouncements);
 
-announcementsRouter.post('/', authenticateToken, requireRole('admin'), announcementsController.newAnnouncement);
+announcementsRouter.post('/', authenticateToken, requireMinRole('house_committee'), announcementsController.newAnnouncement);
+
+announcementsRouter.delete('/:id', authenticateToken, announcementsController.deleteAnnouncement);
