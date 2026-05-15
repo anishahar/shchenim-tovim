@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { Circle, GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
@@ -145,7 +145,7 @@ export default function RequestsList() {
 
   return (
     <div className="flex gap-6" dir="ltr">
-      <div className="min-h-screen bg-gray-50 py-10 px-4 flex-1" dir="rtl">
+      <div className="min-h-screen  bg-gray-50 py-10 px-4 flex-1" dir="rtl">
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
             <h1 className="text-3xl font-bold text-blue-700 text-center mb-8">רשימת בקשות</h1>
@@ -276,7 +276,7 @@ export default function RequestsList() {
                   position={{ lat: userCoords.userLat, lng: userCoords.userLng }}
                   title="Home"
                   icon={{
-                    url: '/homeFavicon.svg',//////////////////
+                    url: '/homeFavicon.svg',
                     scaledSize: new window.google.maps.Size(40, 40),
                   }}
                   options={{
@@ -284,6 +284,20 @@ export default function RequestsList() {
                   }}
                 />
               )}
+              {userCoords && <Circle
+                center={{
+                  lat: userCoords.userLat,
+                  lng: userCoords.userLng,
+                }}
+                radius={radiusFilter * 1000}
+                options={{
+                  fillColor: "#a6b6c6",
+                  fillOpacity: 0.2,
+                  strokeColor: "#73889c",
+                  strokeOpacity: 0.8,
+                  strokeWeight: 2,
+                }}
+              />}
               {markerRequests.map((request) => (
                 <Marker
                   key={request.id}

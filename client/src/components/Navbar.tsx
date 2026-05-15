@@ -5,7 +5,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   return (
-    <nav className="bg-white shadow-md" dir="rtl">
+    <nav className=" sticky top-0 z-50 bg-white shadow-md" dir="rtl">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Title - Right side */}
