@@ -19,6 +19,19 @@ type ChatApiResponse = {
 
 const HELP_MESSAGE = "היי, אני יכול לעזור";
 
+const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
+
+function storeRequestStatus(requestId: number, status: 'open' | 'in_progress' | 'completed') {
+  try {
+    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
+    const statuses = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+    statuses[String(requestId)] = status;
+    localStorage.setItem(REQUEST_STATUS_OVERRIDES_KEY, JSON.stringify(statuses));
+  } catch {
+    // Best-effort frontend sync until the backend updates the request status.
+  }
+}
+
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -84,6 +97,7 @@ export default function RequestDetail() {
 
       const existingChat = await findRequestChat(requestId);
       if (existingChat) {
+        storeRequestStatus(requestId, 'in_progress');
         navigate(`/chats/${existingChat.id}`);
         return;
       }
@@ -109,6 +123,7 @@ export default function RequestDetail() {
               return;
             }
 
+            storeRequestStatus(requestId, 'in_progress');
             navigate(`/chats/${chat.id}`);
           } catch (error) {
             console.error('Failed to find created chat:', error);

@@ -5,6 +5,19 @@ import { Circle, GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/ap
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
+const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
+
+function getStoredRequestStatus(requestId: number): string | undefined {
+  try {
+    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
+    if (!raw) return undefined;
+
+    const statuses = JSON.parse(raw) as Record<string, string>;
+    return statuses[String(requestId)];
+  } catch {
+    return undefined;
+  }
+}
 
 export default function RequestsList() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -109,6 +122,11 @@ export default function RequestsList() {
   const normalizedFilter = textFilter.trim().toLowerCase();
 
   const filteredRequests = requests.filter((request) => {
+    const status =
+      request.status === 'open'
+        ? request.status
+        : getStoredRequestStatus(request.id) ?? request.status;
+    const matchesStatus = status === 'open';
     const matchesText = !normalizedFilter ||
       [request.title, request.description, request.location_text, request.category, request.user?.name]
         .filter(Boolean)
@@ -128,7 +146,7 @@ export default function RequestsList() {
     //     Number(request.longitude)
     //   ) <= radiusFilter;
 
-    return matchesText && matchesUrgency && matchesCategory;
+    return matchesStatus && matchesText && matchesUrgency && matchesCategory;
   });
 
   //Map only requests with valid coordinates
