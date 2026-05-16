@@ -64,6 +64,20 @@ type MessageApiResponse = {
   createdAt: string;
 };
 
+const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
+
+function getStoredRequestStatus(requestId: number): RequestStatus | undefined {
+  try {
+    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
+    if (!raw) return undefined;
+
+    const statuses = JSON.parse(raw) as Record<string, RequestStatus>;
+    return statuses[String(requestId)];
+  } catch {
+    return undefined;
+  }
+}
+
 // ─── Pure Utilities ───────────────────────────────────────────────────────────
 
 function getAvatarColor(id: number): string {
@@ -96,6 +110,15 @@ function formatRelativeDate(date: Date): string {
 function normalizeChat(chat: ChatApiResponse): ChatWithLastMessage {
   return {
     ...chat,
+    request: chat.request
+      ? {
+          ...chat.request,
+          status:
+            chat.request.status === 'open'
+              ? getStoredRequestStatus(chat.request.id) ?? chat.request.status
+              : chat.request.status,
+        }
+      : chat.request,
     createdAt: new Date(chat.createdAt),
     updatedAt: new Date(chat.updatedAt),
   };
@@ -408,6 +431,38 @@ export default function ChatList() {
     return () => {
       socket.off('new_message', handleNewMessage);
     };
+  }, []);
+
+  useEffect(() => {
+    async function refreshChatStatuses() {
+      try {
+        const response = await api.get<ChatApiResponse[]>('/chats');
+        const statusByChatId = new Map(
+          response.data
+            .filter((chat) => chat.request)
+            .map((chat) => [chat.id, chat.request!.status])
+        );
+
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.request && statusByChatId.has(chat.id)
+              ? {
+                  ...chat,
+                  request: {
+                    ...chat.request,
+                    status: statusByChatId.get(chat.id) ?? chat.request.status,
+                  },
+                }
+              : chat
+          )
+        );
+      } catch (err) {
+        console.error('Failed to refresh chat statuses:', err);
+      }
+    }
+
+    const intervalId = window.setInterval(refreshChatStatuses, 5000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const sortedChats = useMemo(

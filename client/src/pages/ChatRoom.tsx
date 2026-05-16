@@ -62,6 +62,7 @@ const STATUS_STYLES: Record<RequestStatus, CSSProperties> = {
 };
 
 const REQUEST_STATUS_OPTIONS: RequestStatus[] = ['open', 'in_progress', 'completed'];
+const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
 
 function getAvatarColor(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
@@ -99,6 +100,29 @@ function normalizeSocketMessage(message: SocketMessagePayload): Message {
     content: message.content,
     createdAt: new Date(message.createdAt),
   };
+}
+
+function getStoredRequestStatus(requestId: number): RequestStatus | undefined {
+  try {
+    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
+    if (!raw) return undefined;
+
+    const statuses = JSON.parse(raw) as Record<string, RequestStatus>;
+    return statuses[String(requestId)];
+  } catch {
+    return undefined;
+  }
+}
+
+function storeRequestStatus(requestId: number, status: RequestStatus) {
+  try {
+    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
+    const statuses = raw ? (JSON.parse(raw) as Record<string, RequestStatus>) : {};
+    statuses[String(requestId)] = status;
+    localStorage.setItem(REQUEST_STATUS_OVERRIDES_KEY, JSON.stringify(statuses));
+  } catch {
+    // Local UI sync is best-effort only; the backend remains the source of truth.
+  }
 }
 
 function Avatar({
@@ -225,38 +249,54 @@ export default function ChatRoom() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    async function fetchChatMeta() {
-      if (!chatId || Number.isNaN(chatId)) return;
+  const fetchChatMeta = useCallback(async () => {
+    if (!chatId || Number.isNaN(chatId)) return;
+
+    try {
+      const response = await api.get<ChatApiResponse[]>('/chats');
+      const currentChat = response.data.find((chat) => chat.id === chatId);
+      setChatMeta(
+        currentChat?.request
+          ? {
+              ...currentChat,
+              request: {
+                ...currentChat.request,
+                status:
+                  currentChat.request.status === 'open'
+                    ? getStoredRequestStatus(currentChat.request.id) ?? currentChat.request.status
+                    : currentChat.request.status,
+              },
+            }
+          : currentChat ?? null
+      );
+
+      if (!currentChat?.request) {
+        setRequestOwnerId(null);
+        return;
+      }
 
       try {
-        const response = await api.get<ChatApiResponse[]>('/chats');
-        const currentChat = response.data.find((chat) => chat.id === chatId);
-        setChatMeta(currentChat ?? null);
-
-        if (!currentChat?.request) {
-          setRequestOwnerId(null);
-          return;
-        }
-
-        try {
-          const requestResponse = await api.get<RequestDetailsResponse>(
-            `/requests/${currentChat.request.id}`
-          );
-          setRequestOwnerId(requestResponse.data.user_id);
-        } catch (err) {
-          console.error('Failed to fetch request owner:', err);
-          setRequestOwnerId(null);
-        }
+        const requestResponse = await api.get<RequestDetailsResponse>(
+          `/requests/${currentChat.request.id}`
+        );
+        setRequestOwnerId(requestResponse.data.user_id);
       } catch (err) {
-        console.error('Failed to fetch chat details:', err);
-        setChatMeta(null);
+        console.error('Failed to fetch request owner:', err);
         setRequestOwnerId(null);
       }
+    } catch (err) {
+      console.error('Failed to fetch chat details:', err);
+      setChatMeta(null);
+      setRequestOwnerId(null);
     }
-
-    fetchChatMeta();
   }, [chatId]);
+
+  useEffect(() => {
+    fetchChatMeta();
+
+    const intervalId = window.setInterval(fetchChatMeta, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [fetchChatMeta]);
 
   useEffect(() => {
     async function fetchMessages() {
@@ -402,9 +442,14 @@ export default function ChatRoom() {
   async function handleStatusChange(nextStatus: RequestStatus) {
     if (!chatMeta?.request || nextStatus === chatMeta.request.status) return;
 
+    if (nextStatus === 'completed' && !confirm('האם אתה בטוח שברצונך לסגור את הבקשה')) {
+      return;
+    }
+
     try {
       setIsUpdatingStatus(true);
       await api.patch(`/requests/${chatMeta.request.id}`, { status: nextStatus });
+      storeRequestStatus(chatMeta.request.id, nextStatus);
       setChatMeta((prev) =>
         prev?.request
           ? {
@@ -416,9 +461,33 @@ export default function ChatRoom() {
             }
           : prev
       );
+
+      if (nextStatus === 'completed') {
+        navigate('/chats');
+      }
     } catch (err) {
       console.error('Failed to update request status:', err);
       setSocketError('לא הצלחנו לעדכן את סטטוס הבקשה');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  }
+
+  async function handleRejectRequest() {
+    if (!chatMeta?.request) return;
+
+    if (!confirm('האם אתה בטוח רוצה לסרב לבקשה?')) {
+      return;
+    }
+
+    try {
+      setIsUpdatingStatus(true);
+      await api.patch(`/requests/${chatMeta.request.id}`, { status: 'open' });
+      storeRequestStatus(chatMeta.request.id, 'open');
+      navigate('/requests');
+    } catch (err) {
+      console.error('Failed to reject request:', err);
+      setSocketError('לא הצלחנו לסרב לבקשה');
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -439,6 +508,8 @@ export default function ChatRoom() {
         justifyContent: 'center',
         padding: '24px 16px',
         boxSizing: 'border-box',
+        height: 'calc(100vh - 80px)',
+        overflow: 'hidden',
       }}
     >
       <section
@@ -446,7 +517,8 @@ export default function ChatRoom() {
         style={{
           width: '100%',
           maxWidth: 760,
-          minHeight: 'calc(100vh - 120px)',
+          height: '100%',
+          minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
           background: '#ffffff',
@@ -532,7 +604,8 @@ export default function ChatRoom() {
               }}
             >
               {canChangeStatus ? (
-                <select
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <select
                   value={chatMeta.request.status}
                   disabled={isUpdatingStatus}
                   onChange={(e) => handleStatusChange(e.target.value as RequestStatus)}
@@ -548,13 +621,31 @@ export default function ChatRoom() {
                     outline: 'none',
                     ...STATUS_STYLES[chatMeta.request.status],
                   }}
-                >
+                  >
                   {REQUEST_STATUS_OPTIONS.map((status) => (
                     <option key={status} value={status}>
                       {STATUS_LABELS[status]}
                     </option>
                   ))}
-                </select>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleRejectRequest}
+                    disabled={isUpdatingStatus}
+                    style={{
+                      border: '1px solid rgba(161,53,68,0.22)',
+                      borderRadius: 999,
+                      background: '#fff1f3',
+                      color: '#a13544',
+                      cursor: isUpdatingStatus ? 'wait' : 'pointer',
+                      fontSize: 14,
+                      fontWeight: 800,
+                      padding: '8px 14px',
+                    }}
+                  >
+                    סרב לבקשה
+                  </button>
+                </div>
               ) : (
                 <span
                   style={{
@@ -593,6 +684,7 @@ export default function ChatRoom() {
           aria-label="הודעות"
           style={{
             flex: 1,
+            minHeight: 0,
             padding: '18px 16px',
             background: '#f8f5f1',
             overflowY: 'auto',
