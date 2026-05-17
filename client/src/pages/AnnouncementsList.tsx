@@ -339,7 +339,8 @@ export default function AnnouncementsList() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const canCreateAnnouncement = !!user;
+  const canCreateAnnouncement =
+    user?.role === 'house_committee' || user?.role === 'area_manager';
 
   const fetchAnnouncements = useCallback(async () => {
     try {

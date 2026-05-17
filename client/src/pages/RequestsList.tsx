@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
 import { Circle, GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
@@ -77,14 +77,6 @@ export default function RequestsList() {
   //   }
   // }, []);
 
-  // // Log when userCoords updates
-  // useEffect(() => {
-  //   console.log("userCoords updated:", userCoords);
-  // }, [userCoords]);
-
-  const center = { lat: userCoords ? userCoords.userLat : 31.117, lng: userCoords ? userCoords.userLng : 35.0818 }; //Users location or center of tel aviv
-
-
   useEffect(() => {
     api.get("/requests", {
       params: {
@@ -100,23 +92,6 @@ export default function RequestsList() {
         setLoading(false);
       });
   }, [radiusFilter]);
-
-  // // Calculate distance between two coordinates using Haversine formula
-  // function toRadians(deg: number) {
-  //   return (deg * Math.PI) / 180;
-  // }
-
-  // function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  //   const R = 6371; // Earth radius in km
-  //   const dLat = toRadians(lat2 - lat1);
-  //   const dLng = toRadians(lng2 - lng1);
-
-  //   const a =
-  //     Math.sin(dLat / 2) ** 2 +
-  //     Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) ** 2;
-
-  //   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  // }
 
   //Filter based on text
   const normalizedFilter = textFilter.trim().toLowerCase();
@@ -137,17 +112,18 @@ export default function RequestsList() {
     const matchesUrgency = !urgencyFilter || request.urgency === urgencyFilter;
     //Filter based on category
     const matchesCategory = !categoryFilter || request.category === categoryFilter;
-    //Filter based on radius
-    // const matchesRadius = !radiusFilter || !userCoords ||
-    //   distanceKm(
-    //     userCoords.userLat,
-    //     userCoords.userLng,
-    //     Number(request.latitude),
-    //     Number(request.longitude)
-    //   ) <= radiusFilter;
 
     return matchesStatus && matchesText && matchesUrgency && matchesCategory;
   });
+
+  const center = useMemo(() => {
+    if (!userCoords) return undefined;
+
+    return {
+      lat: userCoords.userLat,
+      lng: userCoords.userLng,
+    };
+  }, [userCoords]);
 
   //Map only requests with valid coordinates
   const markerRequests = filteredRequests
@@ -158,8 +134,6 @@ export default function RequestsList() {
       lng: Number(request.longitude),
     }))
     .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
-
-  //console.log("markers count:", markerRequests.length, markerRequests);
 
   return (
     <div className="flex gap-6" dir="ltr">
@@ -303,10 +277,8 @@ export default function RequestsList() {
                 />
               )}
               {userCoords && <Circle
-                center={{
-                  lat: userCoords.userLat,
-                  lng: userCoords.userLng,
-                }}
+                key={`${radiusFilter}-${userCoords}`}
+                center={center}
                 radius={radiusFilter * 1000}
                 options={{
                   fillColor: "#a6b6c6",
