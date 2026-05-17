@@ -15,32 +15,36 @@ class AnnouncementsController {
             if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
             const userId = req.user.id;
 
-            // *** ADDED: Fetch user details to get address for filtering ***
+            // Fetch user details to get address for filtering
             const user = await usersService.getUserDetails(userId);
              
-            // *** ADDED: Security Check for address details ***
-            if (!user.city || !user.street || !user.building_number) {
+            // Security Check: Ensure user has address details
+            // NOTE: Using street_number instead of apartment for building-wide logic
+            if (!user.city || !user.street || !user.street_number) {
                 return res.status(400).json({ 
-                    error: 'To view announcements, your profile must include city, street, and building number.' 
+                    error: 'To view announcements, your profile must include city, street, and street number.' 
                 });
             }
             
-            // *** MODIFIED: Added WHERE clause to filter by building address ***
+            // Logic: Show city-wide announcements (street IS NULL) OR building-specific ones
             const query = `
                 SELECT a.*, u.name as author_name 
                 FROM announcements a
                 JOIN users u ON a.author_id = u.id
                 WHERE a.city = $1 
-                  AND a.street = $2 
-                  AND a.building_number = $3
+                  AND (
+                     (a.street IS NULL AND a.street_number IS NULL) -- Area Manager (Global City-wide)
+                     OR 
+                     (a.street = $2 AND a.street_number = $3)       -- Board Manager (Building-wide)
+                  )
                 ORDER BY a.created_at DESC
             `;
             
-            // *** MODIFIED: Passing address parameters to the query ***
+            // Passing city, street, and street_number to the query
             const result = await pool.query(query, [
                 user.city, 
                 user.street, 
-                user.building_number
+                user.street_number
             ]);
 
             const formattedData = result.rows.map(row => ({
@@ -66,17 +70,24 @@ class AnnouncementsController {
         try {
             const { title, content } = req.body;
             const authorId = req.user.id;
+            
+            // Extract the user role
+            const userRole = req.user.role as UserRole;
 
             if (!title || !content) {
                 return res.status(400).json({ error: 'Title and content are required' });
             }
 
-            // *** ADDED: Fetch admin address to tag the new announcement ***
+            // Fetch publisher address details
             const admin = await usersService.getUserDetails(authorId);
 
-            // *** MODIFIED: Insert includes city, street, and building_number ***
+            // Check if the publisher is an Area Manager
+            const isAreaManager = userRole === ROLES.AREA_MANAGER;
+
+            // IMPORTANT: If Area Manager, street and street_number are saved as NULL.
+            // This allows the "GET" query to show the message to the entire city.
             const result = await pool.query(
-                `INSERT INTO announcements (author_id, title, content, city, street, building_number) 
+                `INSERT INTO announcements (author_id, title, content, city, street, street_number) 
                  VALUES ($1, $2, $3, $4, $5, $6) 
                  RETURNING id, title, content, created_at`,
                 [
@@ -84,8 +95,8 @@ class AnnouncementsController {
                     title, 
                     content, 
                     admin.city, 
-                    admin.street, 
-                    admin.building_number
+                    isAreaManager ? null : admin.street,        // Set NULL for Area Manager
+                    isAreaManager ? null : admin.street_number  // Set NULL for Area Manager
                 ]
             );
 
@@ -128,6 +139,6 @@ class AnnouncementsController {
             return res.status(500).json({ error: 'Failed to delete announcement' });
         }
     }
-};
+}
 
 export const announcementsController = new AnnouncementsController();
