@@ -74,6 +74,11 @@ class AnnouncementsController {
             // Extract the user role
             const userRole = req.user.role as UserRole;
 
+            //only Board Manager and Area Manager can create announcements
+            if (userRole !== ROLES.HOUSE_COMMITTEE && userRole !== ROLES.AREA_MANAGER) {
+                return res.status(403).json({ error: 'Only board managers and area managers can create announcements' });
+            }
+
             if (!title || !content) {
                 return res.status(400).json({ error: 'Title and content are required' });
             }
@@ -83,6 +88,13 @@ class AnnouncementsController {
 
             // Check if the publisher is an Area Manager
             const isAreaManager = userRole === ROLES.AREA_MANAGER;
+
+            if(!admin.city || (!isAreaManager && (!admin.street || !admin.street_number))){
+                return res.status(400).json({ 
+               error: 'To publish an announcement, your profile must include a valid address (city, street, and building number).' 
+                   });
+            }
+
 
             // IMPORTANT: If Area Manager, street and street_number are saved as NULL.
             // This allows the "GET" query to show the message to the entire city.
