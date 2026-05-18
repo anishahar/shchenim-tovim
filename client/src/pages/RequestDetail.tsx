@@ -17,7 +17,7 @@ type ChatApiResponse = {
   } | null;
 };
 
-const HELP_MESSAGE = "היי, אני יכול לעזור";
+const HELP_MESSAGE = "היי, אני אעזור";
 
 const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
 
@@ -44,12 +44,12 @@ export default function RequestDetail() {
 
   const { user } = useAuth();
   console.log("Current user id:", user?.id);
-  console.log("Current user name:", user?.name); 
+  console.log("Current user name:", user?.name);
 
   //Delete request
   function handleDelete() {
     api.delete(`/requests/${id}`)
-      .then(()  => {
+      .then(() => {
         alert("הבקשה נמחקה בהצלחה");
         navigate(`/requests`)
       })
@@ -69,7 +69,7 @@ export default function RequestDetail() {
         .catch((error) => {
           console.error("Error fetching request:", error);
           setLoading(false);
-      });
+        });
     }
   }, [id]);
 
@@ -177,8 +177,8 @@ export default function RequestDetail() {
               <span>🕐 {new Date(request.created_at).toLocaleDateString('he-IL')}</span>
             )}
             <span>
-             פורסם על ידי: {request.user_name}
-                  </span>
+              פורסם על ידי: {request.user_name}
+            </span>
           </div>
           {request.image_url && (
             <div className="mb-6">

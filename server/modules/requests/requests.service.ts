@@ -12,6 +12,15 @@ class RequestsService {
             throw error;
         }
     }
+
+    requestStatusInProgress = async (requestId: number) => {
+        try {
+            await requestsRepository.requestStatusInProgress(requestId);
+        } catch (error) {
+            console.error('error in requestStatusInProgress:', error, 'layer: service');
+            throw error;
+        }
+    }
 };
 
 export const requestsService = new RequestsService();

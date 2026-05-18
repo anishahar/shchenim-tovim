@@ -28,6 +28,8 @@ class ChatsService {
         try {
             const requesterId = await requestsService.getRequesterByRequestId(requestId);
             const { id: chatId } = await chatsRepository.newChat(requestId, helperId, requesterId);
+
+            requestsService.requestStatusInProgress(requestId);
             return { chatId, otherUserId: requesterId };
         } catch (error) {
             console.error('error in newRequestChat:', error, 'layer: service');
