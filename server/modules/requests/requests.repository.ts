@@ -17,6 +17,19 @@ class RequestsRepository {
             throw error;
         }
     }
+
+    requestStatusInProgress = async (requestId: number) => {
+        try {
+            const result = await pool.query<{ user_id: number }>
+                (
+                    GET_REQUESTER_ID, [requestId]
+                );
+            if (result.rows.length === 0) throw new Error("request id does not exist");
+        } catch (error) {
+            console.error('error in requestStatusInProgress:', error, 'layer: repository');
+            throw error;
+        }
+    }
 };
 
 export const requestsRepository = new RequestsRepository();
