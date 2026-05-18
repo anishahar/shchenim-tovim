@@ -1,5 +1,5 @@
 import { pool } from "../../db.js";
-import { GET_REQUESTER_ID } from "./requests.db.js";
+import { GET_REQUESTER_ID, UPDATE_REQUEST_STATUS } from "./requests.db.js";
 
 
 class RequestsRepository {
@@ -20,11 +20,10 @@ class RequestsRepository {
 
     requestStatusInProgress = async (requestId: number) => {
         try {
-            const result = await pool.query<{ user_id: number }>
+            await pool.query<{ user_id: number }>
                 (
-                    GET_REQUESTER_ID, [requestId]
+                    UPDATE_REQUEST_STATUS, [requestId]
                 );
-            if (result.rows.length === 0) throw new Error("request id does not exist");
         } catch (error) {
             console.error('error in requestStatusInProgress:', error, 'layer: repository');
             throw error;
