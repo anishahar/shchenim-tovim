@@ -8,4 +8,6 @@ chatsRouter.get('/', authenticateToken, chatsController.getUserChats);
 
 chatsRouter.get('/:id/messages', authenticateToken, chatsController.getChatMessages);
 
-chatsRouter.patch('/lastReadAt', authenticateToken, chatsController.updateLastReadTime); 
+chatsRouter.patch('/:id/mark-as-read', authenticateToken, chatsController.updateLastReadTime);
+
+chatsRouter.patch('/:id/refuse-help', authenticateToken, chatsController.refuseHelp); 

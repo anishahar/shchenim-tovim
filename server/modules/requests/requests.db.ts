@@ -1,7 +1,7 @@
 
-
-export const GET_REQUESTER_ID = `
-    SELECT user_id
+//////////////////////////////////////needs parsing will do after a refactor...
+export const GET_BY_ID = `
+    SELECT *
     FROM requests
     WHERE id = $1;
 `;

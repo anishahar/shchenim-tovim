@@ -258,15 +258,15 @@ export default function ChatRoom() {
       setChatMeta(
         currentChat?.request
           ? {
-              ...currentChat,
-              request: {
-                ...currentChat.request,
-                status:
-                  currentChat.request.status === 'open'
-                    ? getStoredRequestStatus(currentChat.request.id) ?? currentChat.request.status
-                    : currentChat.request.status,
-              },
-            }
+            ...currentChat,
+            request: {
+              ...currentChat.request,
+              status:
+                currentChat.request.status === 'open'
+                  ? getStoredRequestStatus(currentChat.request.id) ?? currentChat.request.status
+                  : currentChat.request.status,
+            },
+          }
           : currentChat ?? null
       );
 
@@ -453,12 +453,12 @@ export default function ChatRoom() {
       setChatMeta((prev) =>
         prev?.request
           ? {
-              ...prev,
-              request: {
-                ...prev.request,
-                status: nextStatus,
-              },
-            }
+            ...prev,
+            request: {
+              ...prev.request,
+              status: nextStatus,
+            },
+          }
           : prev
       );
 
@@ -482,6 +482,7 @@ export default function ChatRoom() {
 
     try {
       setIsUpdatingStatus(true);
+      await api.patch(`/chats/${chatMeta.id}/refuse-help`);
       await api.patch(`/requests/${chatMeta.request.id}`, { status: 'open' });
       storeRequestStatus(chatMeta.request.id, 'open');
       navigate('/requests');
@@ -606,27 +607,27 @@ export default function ChatRoom() {
               {canChangeStatus ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <select
-                  value={chatMeta.request.status}
-                  disabled={isUpdatingStatus}
-                  onChange={(e) => handleStatusChange(e.target.value as RequestStatus)}
-                  aria-label="עדכון סטטוס הבקשה"
-                  title="עדכון סטטוס הבקשה"
-                  style={{
-                    border: 'none',
-                    borderRadius: 999,
-                    cursor: isUpdatingStatus ? 'wait' : 'pointer',
-                    fontSize: 14,
-                    fontWeight: 800,
-                    padding: '8px 14px',
-                    outline: 'none',
-                    ...STATUS_STYLES[chatMeta.request.status],
-                  }}
+                    value={chatMeta.request.status}
+                    disabled={isUpdatingStatus}
+                    onChange={(e) => handleStatusChange(e.target.value as RequestStatus)}
+                    aria-label="עדכון סטטוס הבקשה"
+                    title="עדכון סטטוס הבקשה"
+                    style={{
+                      border: 'none',
+                      borderRadius: 999,
+                      cursor: isUpdatingStatus ? 'wait' : 'pointer',
+                      fontSize: 14,
+                      fontWeight: 800,
+                      padding: '8px 14px',
+                      outline: 'none',
+                      ...STATUS_STYLES[chatMeta.request.status],
+                    }}
                   >
-                  {REQUEST_STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {STATUS_LABELS[status]}
-                    </option>
-                  ))}
+                    {REQUEST_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {STATUS_LABELS[status]}
+                      </option>
+                    ))}
                   </select>
                   <button
                     type="button"

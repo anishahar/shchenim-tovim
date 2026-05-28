@@ -1,4 +1,3 @@
-
 export const GET_USER_CHATS_INFO = `
     SELECT 
     chats.id,
@@ -21,7 +20,9 @@ export const GET_USER_CHATS_INFO = `
         'status', requests.status
     )
     ELSE NULL
-    END as "request"
+    END as "request",
+
+    chats.refused_help_at as "refusedHelpAt"
 
     FROM chats
     LEFT JOIN requests 
@@ -34,7 +35,7 @@ export const GET_USER_CHATS_INFO = `
     END
 
     WHERE 
-        chats.user1_id = $1 OR chats.user2_id = $1;
+        chats.user1_id = $1 OR chats.user2_id = $1
 `;
 
 export const NEW_CHAT = `
@@ -49,24 +50,16 @@ export const GET_CHAT_MESSAGES = `
     WHERE chat_id = $1
 `;
 
-export const IS_USER_MEMBER_IN_CHAT = `
-    SELECT EXISTS (
-    SELECT 1
-    FROM chats
-    WHERE id = $1
-      AND (user1_id = $2 OR user2_id = $2)
-)`;
-
 export const SEND_MESSAGE = `
     INSERT INTO messages (chat_id, sender_id, content)
     VALUES ($1, $2, $3)
-    RETURNING created_at as "createdAt";
+    RETURNING created_at as "createdAt"
 `;
 
 export const UPDATE_CHAT_TIMESTAMP = `
     UPDATE chats
     SET updated_at = $2
-    WHERE id = $1;
+    WHERE id = $1
 `;
 
 export const UPDATE_LAST_READ_TIMESTAMP = `
@@ -80,7 +73,7 @@ export const UPDATE_LAST_READ_TIMESTAMP = `
         WHEN user2_id = $1 THEN NOW()
         ELSE last_read_at2
     END
-    WHERE id = $2;
+    WHERE id = $2
 `;
 
 export const GET_UNREAD_MESSAGES_AMOUNT = `
@@ -93,6 +86,17 @@ export const GET_UNREAD_MESSAGES_AMOUNT = `
         OR
         (c.user2_id = $2 AND m.created_at > c.last_read_at2)
     )
-    AND m.sender_id != $2;
+    AND m.sender_id != $2
 `;
+
+export const GET_BY_ID = GET_USER_CHATS_INFO + `
+    And chats.id = $2
+`;
+
+export const REFUSE_HELP = `
+    UPDATE chats 
+    SET refused_help_at = NOW()
+    Where chats.id = $1
+`;
+
 
