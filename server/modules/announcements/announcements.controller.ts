@@ -27,19 +27,20 @@ class AnnouncementsController {
             }
             
             // Logic: Show city-wide announcements (street IS NULL) OR building-specific ones
-            const query = `
+           const query = `
                 SELECT a.*, u.name as author_name 
                 FROM announcements a
                 JOIN users u ON a.author_id = u.id
                 WHERE a.city = $1 
                   AND (
-                     (a.author_role_at_publication = 'AREA_MANAGER') 
+                     (LOWER(a.author_role_at_publication) = 'area_manager') 
                       OR 
 
                       (a.street = $2 AND a.street_number = $3)
                   )
                 ORDER BY a.created_at DESC
             `;
+   
             
             // Passing city, street, and street_number to the query
             const result = await pool.query(query, [
