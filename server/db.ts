@@ -107,9 +107,6 @@ export async function initializeDatabase() {
   try {
     await pool.query(schema);
 
-    // Migrate existing 'admin' users to 'area_manager'
-    await pool.query("UPDATE users SET role = 'area_manager' WHERE role = 'admin'");
-
     console.log('Database schema initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);

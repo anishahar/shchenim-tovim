@@ -104,7 +104,6 @@ class ChatsRepository {
     }
 
     refuseHelp = async (chatId: number) => {
-        console.log("here ", chatId)
         try {
             await pool.query
                 (

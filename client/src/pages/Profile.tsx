@@ -311,7 +311,7 @@ export default function Profile() {
                     </div>
                     <div>
                       <label htmlFor="streetNumber" className="block text-sm font-medium text-gray-700 mb-2">
-                        מספר בית
+                        מספר בניין
                       </label>
                       <input
                         type="text"

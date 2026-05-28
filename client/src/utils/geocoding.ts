@@ -57,7 +57,7 @@ export async function geocodeAddress(locationText: string): Promise<GeocodedLoca
 
   // 1. Check for partial match - Google shouldn't guess
   if (first.partial_match) {
-    throw new Error('כתובת לא מדויקת - אנא הזן כתובת מלאה כולל מספר בית');
+    throw new Error('כתובת לא מדויקת - אנא הזן כתובת מלאה כולל מספר בניין');
   }
 
   // 2. Check if it's a valid address type
@@ -71,7 +71,7 @@ export async function geocodeAddress(locationText: string): Promise<GeocodedLoca
     first.types.some((type: string) => allowedTypes.has(type));
 
   if (!hasAllowedType) {
-    throw new Error('כתובת לא מדויקת - יש להזין כתובת מלאה (רחוב, מספר בית, עיר)');
+    throw new Error('כתובת לא מדויקת - יש להזין כתובת מלאה (רחוב, מספר בניין, עיר)');
   }
 
   // 3. Validate address components - must have street number, street name, and city
@@ -90,7 +90,7 @@ export async function geocodeAddress(locationText: string): Promise<GeocodedLoca
   );
 
   if (!hasStreetNumber) {
-    throw new Error('חסר מספר בית - אנא הזן כתובת מלאה כולל מספר');
+    throw new Error('חסר מספר בניין - אנא הזן כתובת מלאה כולל מספר');
   }
 
   if (!hasStreetName) {
@@ -244,7 +244,7 @@ export async function validateFullAddress(
   }
 
   if (!number.trim()) {
-    throw new Error('יש להזין מספר בית');
+    throw new Error('יש להזין מספר בניין');
   }
 
   // Query: "{street} {number}, {city}, ישראל"
