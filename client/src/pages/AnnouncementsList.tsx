@@ -377,50 +377,48 @@ export default function AnnouncementsList() {
     );
   }, [sortedAnnouncements, search]);
 
-  const handlePublish = useCallback(
-    async (title: string, content: string) => {
-      if (!user) return;
+ const handlePublish = useCallback(
+  async (title: string, content: string) => {
+    if (!user) return;
 
-      try {
-        setIsPublishing(true);
-        setError(null);
-        const response = await api.post<CreateAnnouncementResponse>('/announcements', {
-          title,
-          content,
-        });
+    try {
+      setIsPublishing(true);
+      setError(null);
 
-        const created = response.data;
-        setAnnouncements((prev) => [
-          {
-            id: created.id,
-            title: created.title,
-            content: created.content,
-            author: { id: user.id, name: user.name },
-            createdAt: new Date(created.createdAt ?? created.created_at ?? Date.now()),
-          },
-          ...prev,
-        ]);
-        setShowCreateForm(false);
-      } catch (err) {
-        console.error('Failed to publish announcement:', err);
-        const responseError = (err as { response?: { data?: { error?: string } } }).response?.data?.error;
-        if (responseError === 'house_committee access or higher required') {
-          setError(
-            user.role === 'area_manager' || user.role === 'house_committee'
-              ? 'ההרשאה בטוקן לא מעודכנת. התנתק והתחבר שוב ואז נסה לפרסם מודעה.'
-              : 'רק וועד הבית יכול לפרסם מודעה חדשה'
-          );
-        } else if (responseError) {
-          setError(responseError);
-        } else {
-          setError('לא הצלחנו לפרסם את המודעה');
-        }
-      } finally {
-        setIsPublishing(false);
+      await api.post('/announcements', {
+        title,
+        content,
+      });
+
+      await fetchAnnouncements();
+
+      setShowCreateForm(false);
+
+    } catch (err) {
+      console.error('Failed to publish announcement:', err);
+
+      const responseError =
+        (err as { response?: { data?: { error?: string } } })
+          .response?.data?.error;
+
+      if (responseError === 'house_committee access or higher required') {
+        setError(
+          user.role === 'area_manager' || user.role === 'house_committee'
+            ? 'ההרשאה בטוקן לא מעודכנת. התנתק והתחבר שוב ואז נסה לפרסם מודעה.'
+            : 'רק וועד הבית יכול לפרסם מודעה חדשה'
+        );
+      } else if (responseError) {
+        setError(responseError);
+      } else {
+        setError('לא הצלחנו לפרסם את המודעה');
       }
-    },
-    [user],
-  );
+
+    } finally {
+      setIsPublishing(false);
+    }
+  },
+  [user, fetchAnnouncements],
+);
 
   const handleDelete = useCallback(async (id: number) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק את המודעה?')) return;

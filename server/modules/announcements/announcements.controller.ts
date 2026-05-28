@@ -27,18 +27,20 @@ class AnnouncementsController {
             }
             
             // Logic: Show city-wide announcements (street IS NULL) OR building-specific ones
-            const query = `
+           const query = `
                 SELECT a.*, u.name as author_name 
                 FROM announcements a
                 JOIN users u ON a.author_id = u.id
                 WHERE a.city = $1 
                   AND (
-                     (a.street IS NULL AND a.street_number IS NULL) -- Area Manager (Global City-wide)
-                     OR 
-                     (a.street = $2 AND a.street_number = $3)       -- Board Manager (Building-wide)
+                     (LOWER(a.author_role_at_publication) = 'area_manager') 
+                      OR 
+
+                      (a.street = $2 AND a.street_number = $3)
                   )
                 ORDER BY a.created_at DESC
             `;
+   
             
             // Passing city, street, and street_number to the query
             const result = await pool.query(query, [
@@ -99,8 +101,8 @@ class AnnouncementsController {
             // IMPORTANT: If Area Manager, street and street_number are saved as NULL.
             // This allows the "GET" query to show the message to the entire city.
             const result = await pool.query(
-                `INSERT INTO announcements (author_id, title, content, city, street, street_number) 
-                 VALUES ($1, $2, $3, $4, $5, $6) 
+                `INSERT INTO announcements (author_id, title, content, city, street, street_number,author_role_at_publication) 
+                 VALUES ($1, $2, $3, $4, $5, $6 ,$7) 
                  RETURNING id, title, content, created_at`,
                 [
                     authorId, 
@@ -108,7 +110,9 @@ class AnnouncementsController {
                     content, 
                     admin.city, 
                     isAreaManager ? null : admin.street,        // Set NULL for Area Manager
-                    isAreaManager ? null : admin.street_number  // Set NULL for Area Manager
+                    isAreaManager ? null : admin.street_number , // Set NULL for Area Manager
+                    userRole // Include the user's role at the time of publication
+
                 ]
             );
 
