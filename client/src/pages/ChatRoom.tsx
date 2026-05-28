@@ -476,7 +476,7 @@ export default function ChatRoom() {
   async function handleRejectRequest() {
     if (!chatMeta?.request) return;
 
-    if (!confirm('האם אתה בטוח רוצה לסרב לבקשה?')) {
+    if (!confirm('האם אתה בטוח רוצה לסרב לעזרה?')) {
       return;
     }
 
@@ -488,7 +488,7 @@ export default function ChatRoom() {
       navigate('/requests');
     } catch (err) {
       console.error('Failed to reject request:', err);
-      setSocketError('לא הצלחנו לסרב לבקשה');
+      setSocketError('לא הצלחנו לסרב לעזרה');
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -644,7 +644,7 @@ export default function ChatRoom() {
                       padding: '8px 14px',
                     }}
                   >
-                    סרב לבקשה
+                    סרב לעזרה
                   </button>
                 </div>
               ) : (

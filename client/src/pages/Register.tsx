@@ -196,7 +196,7 @@ export default function Register() {
 
           <div>
             <label htmlFor="streetNumber" className="block text-sm font-medium text-gray-700 mb-1">
-              מספר בית *
+              מספר בניין *
             </label>
             <input
               type="text"
