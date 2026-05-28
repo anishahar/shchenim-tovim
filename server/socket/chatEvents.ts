@@ -7,9 +7,10 @@ export const registerChatEvents = (io: Server, socket: Socket) => {
     socket.on('join_chat', async (chatId: number, callback: (response: SocketResponse) => void) => {
         const userId = socket.data.user.id;
 
-        const isMember = await chatsService.validateUserInExitsingChat(chatId, userId);
+        try {
+            await chatsService.getChatByIdForUser(chatId, userId); //check if the chats exist and the user is a member, if not it will throw an error
 
-        if (!isMember) {
+        } catch (error) {
             return callback({ ok: false, error: "Not a member" });
         }
 

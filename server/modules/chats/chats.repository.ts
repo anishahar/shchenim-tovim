@@ -1,6 +1,6 @@
 import { Chat, Message } from "@typesLib";
 import { pool } from "../../db.js";
-import { GET_CHAT_MESSAGES, GET_UNREAD_MESSAGES_AMOUNT, GET_USER_CHATS_INFO, IS_USER_MEMBER_IN_CHAT, NEW_CHAT, SEND_MESSAGE, UPDATE_CHAT_TIMESTAMP, UPDATE_LAST_READ_TIMESTAMP } from "./chats.db.js";
+import { GET_BY_ID, GET_CHAT_MESSAGES, GET_UNREAD_MESSAGES_AMOUNT, GET_USER_CHATS_INFO, NEW_CHAT, REFUSE_HELP, SEND_MESSAGE, UPDATE_CHAT_TIMESTAMP, UPDATE_LAST_READ_TIMESTAMP } from "./chats.db.js";
 
 
 class ChatsRepository {
@@ -39,16 +39,15 @@ class ChatsRepository {
         }
     }
 
-    validateUserInExitsingChat = async (chatId: number, userId: number) => {
+    getChatByIdForUser = async (chatId: number, userId: number) => {
         try {
-            const result = await pool.query<{ exists: boolean }>
-                (
-                    IS_USER_MEMBER_IN_CHAT, [chatId, userId]
-                );
+            const result = await pool.query<Omit<Chat, "unreadMessagesAmount">>(
+                GET_BY_ID, [userId, chatId]
+            );
 
-            return result.rows[0]?.exists ?? false;
+            return result.rows[0];
         } catch (error) {
-            console.error('error in validateUserInExitsingChat:', error, 'layer: repository');
+            console.error('error in getChatByIdForUser:', error, 'layer: repository');
             throw error;
         }
     }
@@ -100,6 +99,19 @@ class ChatsRepository {
             return res.rows[0];
         } catch (error) {
             console.error('error in getUnreadMessagesAmount:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
+    refuseHelp = async (chatId: number) => {
+        console.log("here ", chatId)
+        try {
+            await pool.query
+                (
+                    REFUSE_HELP, [chatId]
+                );
+        } catch (error) {
+            console.error('error in refuseHelp:', error, 'layer: repository');
             throw error;
         }
     }

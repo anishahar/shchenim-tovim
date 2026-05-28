@@ -8,5 +8,13 @@ export const getMessagesSchema = z.object({
 
 
 export const updateLastReadTimeSchema = z.object({
-    chatId: z.number(),
+    params: z.object({
+        id: z.string().transform(Number).refine((n) => !Number.isNaN(n)),
+    })
+});
+
+export const refuseHelpSchema = z.object({
+    params: z.object({
+        id: z.string().transform(Number).refine((n) => !Number.isNaN(n)),
+    })
 });

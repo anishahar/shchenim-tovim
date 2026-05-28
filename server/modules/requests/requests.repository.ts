@@ -1,19 +1,18 @@
 import { pool } from "../../db.js";
-import { GET_REQUESTER_ID, UPDATE_REQUEST_STATUS } from "./requests.db.js";
+import { GET_BY_ID, UPDATE_REQUEST_STATUS } from "./requests.db.js";
 
 
 class RequestsRepository {
-
-    getRequesterByRequestId = async (requestId: number) => {
+    //needs parsinggggggg
+    getById = async (requestId: number) => {
         try {
-            const result = await pool.query<{ user_id: number }>
+            const result = await pool.query
                 (
-                    GET_REQUESTER_ID, [requestId]
+                    GET_BY_ID, [requestId]
                 );
-            if (result.rows.length === 0) throw new Error("request id does not exist");
             return result.rows[0]
         } catch (error) {
-            console.error('error in getRequesterByRequestId:', error, 'layer: repository');
+            console.error('error in getById:', error, 'layer: repository');
             throw error;
         }
     }

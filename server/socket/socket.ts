@@ -23,7 +23,6 @@ export function setupSocket(httpServer: HTTPServer) {
     try {
       const chats = await chatsService.getUserChats(userId);
 
-      console.log(chats)
       chats.forEach(chat => {
         socket.join(`chat_${chat.id}`);
       });

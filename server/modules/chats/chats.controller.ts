@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { chatsService } from './chats.service.js';
-import { getMessagesSchema, updateLastReadTimeSchema } from './chats.validation.js';
+import { getMessagesSchema, refuseHelpSchema, updateLastReadTimeSchema } from './chats.validation.js';
 
 class ChatsController {
     getUserChats = async (req: Request, res: Response) => {
@@ -18,48 +18,6 @@ class ChatsController {
         }
     }
 
-    // newRequestChat = async (req: Request, res: Response) => {
-    //     const { data, error } = newRequesrtChatSchema.safeParse(req)
-
-    //     if (error) return res.status(400).json({ errors: error })
-
-    //     const requestId = data.query.requestId;
-
-    //     if (!req.user) return res.status(401);
-    //     const userId = req.user.id;
-
-    //     try {
-    //         const chatId = await chatsService.newChat(requestId, userId);
-    //         return res.status(200).json(chatId);
-    //     }
-    //     catch (error) {
-    //         console.error('error in creating new chat request:', error);
-    //         res.status(500).json({ error: 'creating chat request failed' });
-
-    //     }
-    // }
-
-    // newChat = async (req: Request, res: Response) => {
-    //     const { data, error } = newChatSchema.safeParse(req)
-
-    //     if (error) return res.status(400).json({ errors: error })
-
-    //     const otherUserId = data.query.otherUserId;
-
-    //     if (!req.user) return res.status(401);
-    //     const userId = req.user.id;
-
-    //     try {
-    //         const chatId = await chatsService.newChat(otherUserId, userId);
-    //         return res.status(200).json(chatId);
-    //     }
-    //     catch (error) {
-    //         console.error('error in creating new chat:', error);
-    //         res.status(500).json({ error: 'creating chat failed' });
-
-    //     }
-    // }
-
     getChatMessages = async (req: Request, res: Response) => {
         const { data, error } = getMessagesSchema.safeParse(req)
 
@@ -75,7 +33,7 @@ class ChatsController {
         }
         catch (error) {
             console.error('error in getting chat messages:', error);
-            res.status(500).json({ error: 'getting chat messages' });
+            res.status(500).json({ error: 'error in getting chat messages' });
 
         }
     }
@@ -84,7 +42,7 @@ class ChatsController {
         const { data, error } = updateLastReadTimeSchema.safeParse(req);
 
         if (error) return res.status(400).json({ errors: error });
-        const chatId = data.chatId;
+        const chatId = data.params.id;
 
         if (!req.user) return res.status(401);
         const userId = req.user.id;
@@ -97,6 +55,25 @@ class ChatsController {
             console.error('error in updateLastReadTime:', error);
             res.status(500).json({ error: error });
 
+        }
+    }
+
+    refuseHelp = async (req: Request, res: Response) => {
+        const { data, error } = refuseHelpSchema.safeParse(req);
+
+        if (error) return res.status(400).json({ errors: error });
+        const chatId = data.params.id;
+
+        if (!req.user) return res.status(401);
+        const userId = req.user.id;
+
+        try {
+            await chatsService.refuseHelp(chatId, userId);
+            return res.status(200);
+        }
+        catch (error) {
+            console.error('error in refuseHelp:', error);
+            res.status(500).json({ error: error });
         }
     }
 };

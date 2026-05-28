@@ -5,11 +5,11 @@ export interface Request {
     title: string;
     description: string;
     category: string;
+    urgency: 'low' | 'medium' | 'high';
     status: 'open' | 'in_progress' | 'completed';
-    location: {
-        lat: number;
-        lng: number;
-    };
+    locationText: string;
+    latitude: number;
+    longitude: number;
     imageUrl?: string;
     createdAt: Date;
     updatedAt: Date;
