@@ -3,9 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
 import { socket } from '../socket';
-import type { Message } from '@typesLib';
+import type { Chat, Message, RequestStatus } from '@typesLib';
 
 const AVATAR_COLORS = ['#01696f', '#437a22', '#7a39bb', '#da7101', '#006494', '#a13544'] as const;
+const CHAT_META_REFRESH_INTERVAL_MS = 5000;
 
 type MessageApiResponse = Omit<Message, 'createdAt'> & {
   createdAt: string;
@@ -24,25 +25,12 @@ type SocketAck = {
   error?: string;
 };
 
-type RequestStatus = 'open' | 'in_progress' | 'completed';
+type ChatMeta = Pick<Chat, 'id' | 'request' | 'otherUser' | 'refusedHelpAt'>;
 
-type ChatMeta = {
-  id: number;
-  request: {
-    id: number;
-    title: string;
-    status: RequestStatus;
-  } | null;
-  otherUser: {
-    id: number;
-    name: string;
-    avatarUrl?: string;
-  };
-};
-
-type ChatApiResponse = ChatMeta & {
+type ChatApiResponse = Omit<Chat, 'createdAt' | 'updatedAt' | 'refusedHelpAt'> & {
   createdAt: string;
   updatedAt: string;
+  refusedHelpAt?: string | null;
 };
 
 type RequestDetailsResponse = {
@@ -62,7 +50,10 @@ const STATUS_STYLES: Record<RequestStatus, CSSProperties> = {
 };
 
 const REQUEST_STATUS_OPTIONS: RequestStatus[] = ['open', 'in_progress', 'completed'];
-const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
+
+function isValidChatId(chatId: number): boolean {
+  return Number.isFinite(chatId) && chatId > 0;
+}
 
 function getAvatarColor(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
@@ -102,27 +93,13 @@ function normalizeSocketMessage(message: SocketMessagePayload): Message {
   };
 }
 
-function getStoredRequestStatus(requestId: number): RequestStatus | undefined {
-  try {
-    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
-    if (!raw) return undefined;
-
-    const statuses = JSON.parse(raw) as Record<string, RequestStatus>;
-    return statuses[String(requestId)];
-  } catch {
-    return undefined;
-  }
-}
-
-function storeRequestStatus(requestId: number, status: RequestStatus) {
-  try {
-    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
-    const statuses = raw ? (JSON.parse(raw) as Record<string, RequestStatus>) : {};
-    statuses[String(requestId)] = status;
-    localStorage.setItem(REQUEST_STATUS_OVERRIDES_KEY, JSON.stringify(statuses));
-  } catch {
-    // Local UI sync is best-effort only; the backend remains the source of truth.
-  }
+function normalizeChatMeta(chat: ChatApiResponse): ChatMeta {
+  return {
+    id: chat.id,
+    otherUser: chat.otherUser,
+    request: chat.request,
+    refusedHelpAt: chat.refusedHelpAt ? new Date(chat.refusedHelpAt) : null,
+  };
 }
 
 function Avatar({
@@ -231,6 +208,40 @@ const MessageBubble = memo(function MessageBubble({
   );
 });
 
+function SystemNotice({ text, date }: { text: string; date?: Date | null }) {
+  return (
+    <div
+      role="status"
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        margin: '8px 0 14px',
+      }}
+    >
+      <div
+        style={{
+          maxWidth: '85%',
+          borderRadius: 999,
+          background: 'rgba(40,37,29,0.08)',
+          color: '#5e5a53',
+          fontSize: 12,
+          fontWeight: 700,
+          padding: '7px 12px',
+          textAlign: 'center',
+          lineHeight: 1.5,
+        }}
+      >
+        {text}
+        {date && (
+          <span style={{ marginInlineStart: 6, fontWeight: 500 }}>
+            {formatMessageTime(date)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ChatRoom() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -249,26 +260,23 @@ export default function ChatRoom() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const markChatAsRead = useCallback(async () => {
+    if (!isValidChatId(chatId)) return;
+
+    try {
+      await api.patch(`/chats/${chatId}/mark-as-read`);
+    } catch (err) {
+      console.error(`Failed to mark chat ${chatId} as read:`, err);
+    }
+  }, [chatId]);
+
   const fetchChatMeta = useCallback(async () => {
-    if (!chatId || Number.isNaN(chatId)) return;
+    if (!isValidChatId(chatId)) return;
 
     try {
       const response = await api.get<ChatApiResponse[]>('/chats');
       const currentChat = response.data.find((chat) => chat.id === chatId);
-      setChatMeta(
-        currentChat?.request
-          ? {
-            ...currentChat,
-            request: {
-              ...currentChat.request,
-              status:
-                currentChat.request.status === 'open'
-                  ? getStoredRequestStatus(currentChat.request.id) ?? currentChat.request.status
-                  : currentChat.request.status,
-            },
-          }
-          : currentChat ?? null
-      );
+      setChatMeta(currentChat ? normalizeChatMeta(currentChat) : null);
 
       if (!currentChat?.request) {
         setRequestOwnerId(null);
@@ -294,13 +302,13 @@ export default function ChatRoom() {
   useEffect(() => {
     fetchChatMeta();
 
-    const intervalId = window.setInterval(fetchChatMeta, 5000);
+    const intervalId = window.setInterval(fetchChatMeta, CHAT_META_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
   }, [fetchChatMeta]);
 
   useEffect(() => {
     async function fetchMessages() {
-      if (!chatId || Number.isNaN(chatId)) {
+      if (!isValidChatId(chatId)) {
         setError('צ׳אט לא תקין');
         setIsLoading(false);
         return;
@@ -317,6 +325,7 @@ export default function ChatRoom() {
           .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
         setMessages(normalizedMessages);
+        markChatAsRead();
       } catch (err) {
         console.error('Failed to fetch chat messages:', err);
         setError('לא הצלחנו לטעון את ההודעות');
@@ -327,10 +336,10 @@ export default function ChatRoom() {
     }
 
     fetchMessages();
-  }, [chatId]);
+  }, [chatId, markChatAsRead]);
 
   useEffect(() => {
-    if (!user || !chatId || Number.isNaN(chatId)) return;
+    if (!user || !isValidChatId(chatId)) return;
 
     function handleConnect() {
       setIsSocketConnected(true);
@@ -368,6 +377,7 @@ export default function ChatRoom() {
       if (message.chatId !== chatId) return;
 
       const normalizedMessage = normalizeSocketMessage(message);
+      markChatAsRead();
 
       setMessages((prev) => {
         const exists = prev.some((item) => item.id === normalizedMessage.id);
@@ -401,7 +411,7 @@ export default function ChatRoom() {
       socket.off('bootstrap_error', handleBootstrapError);
       socket.off('new_message', handleNewMessage);
     };
-  }, [chatId, user]);
+  }, [chatId, markChatAsRead, user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -410,7 +420,7 @@ export default function ChatRoom() {
   const handleSend = useCallback(() => {
     const trimmed = input.trim();
 
-    if (!trimmed || !chatId || Number.isNaN(chatId) || !user || !socket.connected) {
+    if (!trimmed || !isValidChatId(chatId) || !user || !socket.connected) {
       return;
     }
 
@@ -449,16 +459,15 @@ export default function ChatRoom() {
     try {
       setIsUpdatingStatus(true);
       await api.patch(`/requests/${chatMeta.request.id}`, { status: nextStatus });
-      storeRequestStatus(chatMeta.request.id, nextStatus);
       setChatMeta((prev) =>
         prev?.request
           ? {
-            ...prev,
-            request: {
-              ...prev.request,
-              status: nextStatus,
-            },
-          }
+              ...prev,
+              request: {
+                ...prev.request,
+                status: nextStatus,
+              },
+            }
           : prev
       );
 
@@ -484,7 +493,6 @@ export default function ChatRoom() {
       setIsUpdatingStatus(true);
       await api.patch(`/chats/${chatMeta.id}/refuse-help`);
       await api.patch(`/requests/${chatMeta.request.id}`, { status: 'open' });
-      storeRequestStatus(chatMeta.request.id, 'open');
       navigate('/requests');
     } catch (err) {
       console.error('Failed to reject request:', err);
@@ -496,9 +504,11 @@ export default function ChatRoom() {
 
   const canSend = input.trim().length > 0 && !!user && isSocketConnected;
   const headerTitle = chatMeta?.request?.title ?? `צ׳אט #${chatId}`;
-
   const otherUserName = chatMeta?.otherUser.name ?? `צ׳אט ${chatId}`;
+  const headerLabel = chatMeta?.request ? `${otherUserName} - ${headerTitle}` : otherUserName;
   const canChangeStatus = !!chatMeta?.request && requestOwnerId === user?.id;
+  const showRefusedHelpNotice =
+    !!chatMeta?.request && !!chatMeta.refusedHelpAt && requestOwnerId !== user?.id;
 
   return (
     <div
@@ -568,7 +578,7 @@ export default function ChatRoom() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: chatMeta?.request ? 0 : 18,
+                fontSize: 18,
                 fontWeight: 800,
                 color: '#1f3f8c',
                 whiteSpace: 'nowrap',
@@ -576,10 +586,7 @@ export default function ChatRoom() {
                 textOverflow: 'ellipsis',
               }}
             >
-              {chatMeta?.request && (
-                <span style={{ fontSize: 18 }}>{`${otherUserName} - ${headerTitle}`}</span>
-              )}
-              {otherUserName}
+              {headerLabel}
             </div>
 
             <div
@@ -695,18 +702,29 @@ export default function ChatRoom() {
             <div style={{ textAlign: 'center', color: '#7a7974' }}>טוען הודעות...</div>
           ) : error ? (
             <div style={{ textAlign: 'center', color: '#a13544' }}>{error}</div>
-          ) : messages.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#7a7974' }}>
-              עדיין אין הודעות בשיחה הזאת
-            </div>
           ) : (
-            messages.map((message) => (
-              <MessageBubble
-                key={`${message.id}-${message.createdAt.getTime()}`}
-                message={message}
-                isOwn={message.senderId === user?.id}
-              />
-            ))
+            <>
+              {showRefusedHelpNotice && (
+                <SystemNotice
+                  text={`${otherUserName} סירב לעזרה`}
+                  date={chatMeta?.refusedHelpAt}
+                />
+              )}
+
+              {messages.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#7a7974' }}>
+                  עדיין אין הודעות בשיחה הזאת
+                </div>
+              ) : (
+                messages.map((message) => (
+                  <MessageBubble
+                    key={`${message.id}-${message.createdAt.getTime()}`}
+                    message={message}
+                    isOwn={message.senderId === user?.id}
+                  />
+                ))
+              )}
+            </>
           )}
 
           <div ref={messagesEndRef} />

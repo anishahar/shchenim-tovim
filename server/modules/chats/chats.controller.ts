@@ -49,7 +49,7 @@ class ChatsController {
 
         try {
             await chatsService.updateLastReadTime(chatId, userId);
-            return res.status(200);
+            return res.sendStatus(200);
         }
         catch (error) {
             console.error('error in updateLastReadTime:', error);
