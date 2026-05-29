@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../../db.js';
 import { usersService } from './users.service.js';
-import { getUserSchema } from './users.validation.js';
+import { userIdSchema } from './users.validation.js';
 
 class UsersController {
     /**
@@ -11,7 +11,7 @@ class UsersController {
     getAllUsers = async (req: Request, res: Response) => {
         try {
             const users = await pool.query(
-                'SELECT id, email, name, role, avatar_url, phone, address_text, latitude, longitude, city, street, street_number, apartment, is_blocked, created_at FROM users ORDER BY created_at DESC'
+                'SELECT id, email, name, role, avatar_url as "avatarUrl", phone, address_text as "addressText", latitude, longitude, city, street, street_number as "streetNumber", apartment, is_blocked as "isBlocked", created_at as "createdAt" FROM users ORDER BY created_at DESC'
             );
 
             res.json(users.rows);
@@ -26,7 +26,7 @@ class UsersController {
      * Retrieves user profile details by ID
      */
     getUserDetailes = async (req: Request, res: Response) => {
-        const { data, error } = getUserSchema.safeParse(req)
+        const { data, error } = userIdSchema.safeParse(req)
 
         if (error) return
         const { id } = data.params;
@@ -48,7 +48,7 @@ class UsersController {
      */
     updateUserDetailes = async (req: Request, res: Response) => {
         const { id } = req.params;
-        const { name, phone, avatar_url, address_text, latitude, longitude, city, street, street_number, apartment } = req.body;
+        const { name, phone, avatarUrl, addressText, latitude, longitude, city, street, streetNumber, apartment } = req.body;
 
         // Security Check: Verify that the logged-in user is only updating their own profile
         if (req.user?.id !== parseInt(id)) {
@@ -71,8 +71,8 @@ class UsersController {
                      apartment = COALESCE($10, apartment),
                      updated_at = NOW()
                  WHERE id = $11
-                 RETURNING id, email, name, role, avatar_url, phone, address_text, latitude, longitude, city, street, street_number, apartment`,
-                [name, phone, avatar_url, address_text, latitude, longitude, city, street, street_number, apartment, id]
+                 RETURNING id, email, name, role, avatar_url as "avatarUrl", phone, address_text as "addressText", latitude, longitude, city, street, street_number as "streetNumber", apartment`,
+                [name, phone, avatarUrl, addressText, latitude, longitude, city, street, streetNumber, apartment, id]
             );
 
             res.json({
@@ -90,7 +90,10 @@ class UsersController {
      * Block a user (area manager only)
      */
     blockUser = async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const { data, error } = userIdSchema.safeParse(req)
+
+        if (error) return
+        const { id } = data.params;
 
         try {
             await pool.query('UPDATE users SET is_blocked = TRUE WHERE id = $1', [id]);
@@ -106,7 +109,10 @@ class UsersController {
      * Unblock a user (area manager only)
      */
     unblockUser = async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const { data, error } = userIdSchema.safeParse(req)
+
+        if (error) return
+        const { id } = data.params;
 
         try {
             await pool.query('UPDATE users SET is_blocked = FALSE WHERE id = $1', [id]);

@@ -78,7 +78,7 @@ export async function geocodeAddress(locationText: string): Promise<GeocodedLoca
   const components = first.address_components || [];
 
   const hasStreetNumber = components.some((comp: any) =>
-    comp.types.includes('street_number')
+    comp.types.includes('streetNumber')
   );
 
   const hasStreetName = components.some((comp: any) =>

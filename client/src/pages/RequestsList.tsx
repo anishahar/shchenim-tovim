@@ -4,6 +4,7 @@ import api from "../api";
 import { Circle, GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { Request } from "@typesLib";
 
 const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
 
@@ -20,7 +21,7 @@ function getStoredRequestStatus(requestId: number): string | undefined {
 }
 
 export default function RequestsList() {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [textFilter, setTextFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
@@ -57,25 +58,6 @@ export default function RequestsList() {
     userLat: number;
     userLng: number;
   }
-  // //Get user coordinates on component mount only
-  // useEffect(() => {
-  //   if (navigator.geolocation) {
-  //     navigator.geolocation.getCurrentPosition(
-  //       (position) => {
-  //         console.log("Geolocation success:", position.coords.latitude, position.coords.longitude);
-  //         setUserCoords({
-  //           userLat: position.coords.latitude,
-  //           userLng: position.coords.longitude,
-  //         });
-  //       },
-  //       (error) => {
-  //         console.error("Geolocation error:", error);
-  //       }
-  //     );
-  //   } else {
-  //     console.error("Geolocation not supported");
-  //   }
-  // }, []);
 
   useEffect(() => {
     api.get("/requests", {
@@ -84,7 +66,7 @@ export default function RequestsList() {
       }
     })
       .then((response) => {
-        setRequests(response.data.data);
+        setRequests(response.data);
         setLoading(false);
       })
       .catch((error) => {
@@ -103,7 +85,7 @@ export default function RequestsList() {
         : getStoredRequestStatus(request.id) ?? request.status;
     const matchesStatus = status === 'open';
     const matchesText = !normalizedFilter ||
-      [request.title, request.description, request.location_text, request.category, request.user?.name]
+      [request.title, request.description, request.locationText, request.category, request.user.name]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
@@ -240,11 +222,11 @@ export default function RequestsList() {
                         </span>
                       </div>
                       <p className="text-gray-600 text-sm mb-3">{request.description}</p>
-                      {request.location_text && (
-                        <p className="text-gray-400 text-xs">📍 {request.location_text}</p>
+                      {request.locationText && (
+                        <p className="text-gray-400 text-xs">📍 {request.locationText}</p>
                       )}
                     </Link>
-                    <p className="text-gray-500 text-xs mt-1">פורסם על ידי: {request.user?.name}</p>
+                    <p className="text-gray-500 text-xs mt-1">פורסם על ידי: {request.user.name}</p>
                   </li>
                 ))}
               </ul>

@@ -1,6 +1,6 @@
 import z from "zod";
 
-export const getUserSchema = z.object({
+export const userIdSchema = z.object({
     params: z.object({
         id: z.coerce.number().refine(Number.isFinite)
     })

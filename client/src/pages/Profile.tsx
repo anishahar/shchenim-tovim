@@ -44,7 +44,7 @@ export default function Profile() {
     try {
       const response = await api.get(`/users/${authUser!.id}`);
       const data = response.data;
-      if (data.city && data.street && data.street_number) {
+      if (data.city && data.street && data.streetNumber) {
         // New format - user has separate fields
         setFormData({
           name: data.name || '',
@@ -54,9 +54,9 @@ export default function Profile() {
           address: '',
           city: data.city,
           street: data.street,
-          streetNumber: data.street_number,
+          streetNumber: data.streetNumber,
           apartment: data.apartment || '',
-          avatarUrl: data.avatar_url || '',
+          avatarUrl: data.avatarUrl || '',
         });
       } else {
         // Legacy format - user only has address_text
@@ -65,12 +65,12 @@ export default function Profile() {
           phone: data.phone || '',
           email: data.email || '',
           role: data.role || '',
-          address: data.address_text || '',
+          address: data.addressText || '',
           city: '',
           street: '',
           streetNumber: '',
           apartment: '',
-          avatarUrl: data.avatar_url || '',
+          avatarUrl: data.avatarUrl || '',
         });
       }
     } catch (err) {
@@ -94,7 +94,7 @@ export default function Profile() {
       let updateData: any = {
         name: formData.name,
         phone: formData.phone,
-        avatar_url: formData.avatarUrl,
+        avatarUrl: formData.avatarUrl,
       };
 
       // Only validate and update if user has new format
@@ -120,9 +120,9 @@ export default function Profile() {
           ...updateData,
           city: formData.city,
           street: formData.street,
-          street_number: formData.streetNumber,
+          streetNumber: formData.streetNumber,
           apartment: formData.apartment || null,
-          address_text: address_text,
+          addressText: address_text,
           latitude: location.lat,
           longitude: location.lng,
         };
@@ -134,7 +134,7 @@ export default function Profile() {
       // Update AuthContext so navbar shows new name immediately
       updateUser({
         name: updatedData.user.name,
-        avatarUrl: updatedData.user.avatar_url,
+        avatarUrl: updatedData.user.avatarUrl,
         phone: updatedData.user.phone,
       });
 

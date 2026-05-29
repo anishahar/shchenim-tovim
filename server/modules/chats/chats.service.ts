@@ -1,7 +1,6 @@
 import { Chat } from "@typesLib";
 import { requestsService } from "../requests/requests.service.js";
 import { chatsRepository } from "./chats.repository.js";
-import { requestsRepository } from "../requests/requests.repository.js";
 
 
 class ChatsService {
@@ -41,11 +40,11 @@ class ChatsService {
 
     newRequestChat = async (requestId: number, helperId: number) => {
         try {
-            const request = await requestsService.getById(requestId);
-            const { id: chatId } = await chatsRepository.newChat(requestId, helperId, request.user_id);
+            const request = await requestsService.getRequestByIdForUser(requestId, helperId);
+            const { id: chatId } = await chatsRepository.newChat(requestId, helperId, request.user.id);
 
             requestsService.requestStatusInProgress(requestId);
-            return { chatId, otherUserId: request.user_id };
+            return { chatId, otherUserId: request.user.id };
         } catch (error) {
             console.error('error in newRequestChat:', error, 'layer: service');
             throw error;
@@ -122,9 +121,9 @@ class ChatsService {
                 throw new Error("This chat is not related to a request");
             }
 
-            const request = await requestsRepository.getById(chat.request.id);
+            const request = await requestsService.getRequestByIdForUser(chat.request.id, refusingUserId);
 
-            if (request.user_id !== refusingUserId) {
+            if (request.user.id !== refusingUserId) {
                 throw new Error("Forbidden");
             }
 

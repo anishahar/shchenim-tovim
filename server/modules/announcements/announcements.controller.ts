@@ -17,17 +17,9 @@ class AnnouncementsController {
 
             // Fetch user details to get address for filtering
             const user = await usersService.getUserDetails(userId);
-             
-            // Security Check: Ensure user has address details
-            // NOTE: Using street_number instead of apartment for building-wide logic
-            if (!user.city || !user.street || !user.street_number) {
-                return res.status(400).json({ 
-                    error: 'To view announcements, your profile must include city, street, and street number.' 
-                });
-            }
-            
-            // Logic: Show city-wide announcements (street IS NULL) OR building-specific ones
-           const query = `
+
+            // Logic: Show city-wide announcements (when the admin is area menager) OR building-specific ones
+            const query = `
                 SELECT a.*, u.name as author_name 
                 FROM announcements a
                 JOIN users u ON a.author_id = u.id
@@ -40,13 +32,11 @@ class AnnouncementsController {
                   )
                 ORDER BY a.created_at DESC
             `;
-   
-            
-            // Passing city, street, and street_number to the query
+
             const result = await pool.query(query, [
-                user.city, 
-                user.street, 
-                user.street_number
+                user.city,
+                user.street,
+                user.streetNumber
             ]);
 
             const formattedData = result.rows.map(row => ({
@@ -72,13 +62,13 @@ class AnnouncementsController {
         try {
             const { title, content } = req.body;
             const authorId = req.user.id;
-            
+
             // Extract the user role
             const userRole = req.user.role as UserRole;
 
-            //only Board Manager and Area Manager can create announcements
+            //only house commitee and Area Manager can create announcements
             if (userRole !== ROLES.HOUSE_COMMITTEE && userRole !== ROLES.AREA_MANAGER) {
-                return res.status(403).json({ error: 'Only board managers and area managers can create announcements' });
+                return res.status(403).json({ error: 'Only house commitee or area managers can create announcements' });
             }
 
             if (!title || !content) {
@@ -91,13 +81,6 @@ class AnnouncementsController {
             // Check if the publisher is an Area Manager
             const isAreaManager = userRole === ROLES.AREA_MANAGER;
 
-            if(!admin.city || (!isAreaManager && (!admin.street || !admin.street_number))){
-                return res.status(400).json({ 
-               error: 'To publish an announcement, your profile must include a valid address (city, street, and building number).' 
-                   });
-            }
-
-
             // IMPORTANT: If Area Manager, street and street_number are saved as NULL.
             // This allows the "GET" query to show the message to the entire city.
             const result = await pool.query(
@@ -105,14 +88,13 @@ class AnnouncementsController {
                  VALUES ($1, $2, $3, $4, $5, $6 ,$7) 
                  RETURNING id, title, content, created_at`,
                 [
-                    authorId, 
-                    title, 
-                    content, 
-                    admin.city, 
+                    authorId,
+                    title,
+                    content,
+                    admin.city,
                     isAreaManager ? null : admin.street,        // Set NULL for Area Manager
-                    isAreaManager ? null : admin.street_number , // Set NULL for Area Manager
+                    isAreaManager ? null : admin.streetNumber, // Set NULL for Area Manager
                     userRole // Include the user's role at the time of publication
-
                 ]
             );
 

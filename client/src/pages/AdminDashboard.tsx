@@ -40,19 +40,7 @@ export default function AdminDashboard() {
         const response = await api.get('/users');
         const data = response.data;
 
-        // Convert snake_case to camelCase
-        const formattedUsers = data.map((user: any) => ({
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          avatarUrl: user.avatar_url,
-          phone: user.phone,
-          isBlocked: user.is_blocked,
-          createdAt: user.created_at,
-        }));
-
-        setUsers(formattedUsers);
+        setUsers(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
