@@ -1,4 +1,6 @@
 
+export type RequestStatus = 'open' | 'in_progress' | 'completed';
+
 export interface Request {
     id: number;
     userId: number;
@@ -6,7 +8,7 @@ export interface Request {
     description: string;
     category: string;
     urgency: 'low' | 'medium' | 'high';
-    status: 'open' | 'in_progress' | 'completed';
+    status: RequestStatus;
     locationText: string;
     latitude: number;
     longitude: number;

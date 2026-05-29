@@ -1,10 +1,9 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, type CSSProperties, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Chat } from '@typesLib';
+import type { Chat, RequestStatus } from '@typesLib';
 import api from '../api';
 import { socket } from '../socket';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
+import { useAuth } from '../AuthContext';
 
 const AVATAR_COLORS = [
   '#01696f',
@@ -15,12 +14,14 @@ const AVATAR_COLORS = [
   '#a13544',
 ] as const;
 
+const CHAT_REFRESH_INTERVAL_MS = 5000;
+const MAX_UNREAD_BADGE_COUNT = 99;
+
 type ChatWithLastMessage = Chat & {
   lastMessage?: string;
 };
 
-// זמני בלבד, אפשר למחוק אחר כך
-const MOCK_CHATS: ChatWithLastMessage[] = [
+const FALLBACK_CHATS: ChatWithLastMessage[] = [
   {
     id: 1,
     request: {
@@ -33,6 +34,7 @@ const MOCK_CHATS: ChatWithLastMessage[] = [
     unreadMessagesAmount: 0,
     createdAt: new Date('2026-04-04T14:00:00'),
     updatedAt: new Date('2026-04-04T14:45:00'),
+    refusedHelpAt: null,
   },
   {
     id: 2,
@@ -46,12 +48,9 @@ const MOCK_CHATS: ChatWithLastMessage[] = [
     unreadMessagesAmount: 0,
     createdAt: new Date('2026-04-04T12:00:00'),
     updatedAt: new Date('2026-04-04T13:30:00'),
+    refusedHelpAt: null,
   },
 ];
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type RequestStatus = NonNullable<Chat['request']>['status'];
 
 type ChatApiResponse = Omit<Chat, 'createdAt' | 'updatedAt'> & {
   createdAt: string;
@@ -64,21 +63,12 @@ type MessageApiResponse = {
   createdAt: string;
 };
 
-const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
-
-function getStoredRequestStatus(requestId: number): RequestStatus | undefined {
-  try {
-    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
-    if (!raw) return undefined;
-
-    const statuses = JSON.parse(raw) as Record<string, RequestStatus>;
-    return statuses[String(requestId)];
-  } catch {
-    return undefined;
-  }
-}
-
-// ─── Pure Utilities ───────────────────────────────────────────────────────────
+type NewMessagePayload = {
+  chatId: number;
+  senderId?: number;
+  content: string;
+  createdAt: string | Date;
+};
 
 function getAvatarColor(id: number): string {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
@@ -110,15 +100,7 @@ function formatRelativeDate(date: Date): string {
 function normalizeChat(chat: ChatApiResponse): ChatWithLastMessage {
   return {
     ...chat,
-    request: chat.request
-      ? {
-          ...chat.request,
-          status:
-            chat.request.status === 'open'
-              ? getStoredRequestStatus(chat.request.id) ?? chat.request.status
-              : chat.request.status,
-        }
-      : chat.request,
+    unreadMessagesAmount: Number(chat.unreadMessagesAmount) || 0,
     createdAt: new Date(chat.createdAt),
     updatedAt: new Date(chat.updatedAt),
   };
@@ -131,19 +113,21 @@ function getLastMessage(messages: MessageApiResponse[]): string | undefined {
     ?.content;
 }
 
+async function markChatAsRead(chatId: number) {
+  await api.patch(`/chats/${chatId}/mark-as-read`);
+}
+
 const STATUS_LABELS: Record<RequestStatus, string> = {
   open: 'פתוחה',
   in_progress: 'בטיפול',
   completed: 'הושלמה',
 };
 
-const STATUS_STYLES: Record<RequestStatus, React.CSSProperties> = {
+const STATUS_STYLES: Record<RequestStatus, CSSProperties> = {
   open: { background: 'rgba(218,113,1,0.12)', color: '#da7101' },
   in_progress: { background: 'rgba(1,105,111,0.10)', color: '#01696f' },
   completed: { background: 'rgba(67,122,34,0.12)', color: '#437a22' },
 };
-
-// ─── Sub-Components ───────────────────────────────────────────────────────────
 
 interface AvatarProps {
   name: string;
@@ -212,8 +196,6 @@ function StatusBadge({ status }: StatusBadgeProps) {
   );
 }
 
-// ─── ChatItem ─────────────────────────────────────────────────────────────────
-
 interface ChatItemProps {
   chat: ChatWithLastMessage;
   isSelected: boolean;
@@ -221,7 +203,8 @@ interface ChatItemProps {
 }
 
 const ChatItem = memo(function ChatItem({ chat, isSelected, onClick }: ChatItemProps) {
-  const { otherUser, request, updatedAt, lastMessage } = chat;
+  const { otherUser, request, updatedAt, lastMessage, unreadMessagesAmount } = chat;
+  const hasUnread = unreadMessagesAmount > 0;
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -274,19 +257,46 @@ const ChatItem = memo(function ChatItem({ chat, isSelected, onClick }: ChatItemP
           >
             {otherUser.name}
           </span>
-          <time
-            dateTime={updatedAt.toISOString()}
-            style={{ fontSize: 11, color: '#7a7974', flexShrink: 0 }}
-          >
-            {formatRelativeDate(updatedAt)}
-          </time>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            {hasUnread && (
+              <span
+                aria-label={`${unreadMessagesAmount} הודעות שלא נקראו`}
+                style={{
+                  minWidth: 20,
+                  height: 20,
+                  padding: '0 6px',
+                  borderRadius: 999,
+                  background: '#22c55e',
+                  color: '#ffffff',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  lineHeight: 1,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {unreadMessagesAmount > MAX_UNREAD_BADGE_COUNT
+                  ? `${MAX_UNREAD_BADGE_COUNT}+`
+                  : unreadMessagesAmount}
+              </span>
+            )}
+            <time
+              dateTime={updatedAt.toISOString()}
+              style={{ fontSize: 11, color: hasUnread ? '#16a34a' : '#7a7974' }}
+            >
+              {formatRelativeDate(updatedAt)}
+            </time>
+          </div>
         </div>
 
         <p
           style={{
             marginTop: 6,
             fontSize: 13,
-            color: '#5e5a53',
+            color: hasUnread ? '#28251d' : '#5e5a53',
+            fontWeight: hasUnread ? 700 : 400,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -327,8 +337,6 @@ const ChatItem = memo(function ChatItem({ chat, isSelected, onClick }: ChatItemP
   );
 });
 
-// ─── Search Icon ──────────────────────────────────────────────────────────────
-
 function SearchIcon() {
   return (
     <svg
@@ -353,10 +361,9 @@ function SearchIcon() {
   );
 }
 
-// ─── ChatList ─────────────────────────────────────────────────────────────────
-
 export default function ChatList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<number | undefined>();
   const [chats, setChats] = useState<ChatWithLastMessage[]>([]);
@@ -398,7 +405,7 @@ export default function ChatList() {
       } catch (err) {
         console.error('Failed to fetch chats:', err);
         setError('לא הצלחנו לטעון את השיחות');
-        setChats(MOCK_CHATS); // fallback זמני
+        setChats(FALLBACK_CHATS);
       } finally {
         setIsLoading(false);
       }
@@ -408,11 +415,7 @@ export default function ChatList() {
   }, []);
 
   useEffect(() => {
-    function handleNewMessage(message: {
-      chatId: number;
-      content: string;
-      createdAt: string | Date;
-    }) {
+    function handleNewMessage(message: NewMessagePayload) {
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === message.chatId
@@ -420,6 +423,10 @@ export default function ChatList() {
                 ...chat,
                 lastMessage: message.content,
                 updatedAt: new Date(message.createdAt),
+                unreadMessagesAmount:
+                  message.senderId === user?.id || chat.id === selectedId
+                    ? chat.unreadMessagesAmount
+                    : chat.unreadMessagesAmount + 1,
               }
             : chat
         )
@@ -431,37 +438,39 @@ export default function ChatList() {
     return () => {
       socket.off('new_message', handleNewMessage);
     };
-  }, []);
+  }, [selectedId, user?.id]);
 
   useEffect(() => {
     async function refreshChatStatuses() {
       try {
         const response = await api.get<ChatApiResponse[]>('/chats');
-        const statusByChatId = new Map(
-          response.data
-            .filter((chat) => chat.request)
-            .map((chat) => [chat.id, chat.request!.status])
-        );
+        const refreshedChats = response.data.map(normalizeChat);
+        const chatById = new Map(refreshedChats.map((chat) => [chat.id, chat]));
 
         setChats((prev) =>
-          prev.map((chat) =>
-            chat.request && statusByChatId.has(chat.id)
-              ? {
-                  ...chat,
-                  request: {
-                    ...chat.request,
-                    status: statusByChatId.get(chat.id) ?? chat.request.status,
-                  },
-                }
-              : chat
-          )
+          prev.map((chat) => {
+            const refreshed = chatById.get(chat.id);
+            if (!refreshed) return chat;
+
+            return {
+              ...chat,
+              unreadMessagesAmount: refreshed.unreadMessagesAmount,
+              request:
+                chat.request && refreshed.request
+                  ? {
+                      ...chat.request,
+                      status: refreshed.request.status,
+                    }
+                  : chat.request,
+            };
+          })
         );
       } catch (err) {
         console.error('Failed to refresh chat statuses:', err);
       }
     }
 
-    const intervalId = window.setInterval(refreshChatStatuses, 5000);
+    const intervalId = window.setInterval(refreshChatStatuses, CHAT_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
   }, []);
 
@@ -486,6 +495,16 @@ export default function ChatList() {
   const handleSelect = useCallback(
     (chat: ChatWithLastMessage) => {
       setSelectedId(chat.id);
+      setChats((prev) =>
+        prev.map((item) =>
+          item.id === chat.id ? { ...item, unreadMessagesAmount: 0 } : item
+        )
+      );
+
+      markChatAsRead(chat.id).catch((err) =>
+        console.error(`Failed to mark chat ${chat.id} as read:`, err)
+      );
+
       navigate(`/chats/${chat.id}`);
     },
     [navigate],

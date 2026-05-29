@@ -10,7 +10,7 @@ export interface Chat {
     // lastMessage: string;
     createdAt: Date;
     updatedAt: Date;
-    refusedHelpAt: Date;
+    refusedHelpAt: Date | null;
 }
 
 export interface Message {
