@@ -14,23 +14,11 @@ type ChatApiResponse = {
   id: number;
   request: {
     id: number;
+    status: 'open' | 'in_progress' | 'completed';
   } | null;
 };
 
 const HELP_MESSAGE = "היי, אני אעזור";
-
-const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
-
-function storeRequestStatus(requestId: number, status: 'open' | 'in_progress' | 'completed') {
-  try {
-    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
-    const statuses = raw ? (JSON.parse(raw) as Record<string, string>) : {};
-    statuses[String(requestId)] = status;
-    localStorage.setItem(REQUEST_STATUS_OVERRIDES_KEY, JSON.stringify(statuses));
-  } catch {
-    // Best-effort frontend sync until the backend updates the request status.
-  }
-}
 
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -78,6 +66,19 @@ export default function RequestDetail() {
     return response.data.find((chat) => chat.request?.id === requestId);
   }
 
+  async function waitForRequestChat(requestId: number) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const chat = await findRequestChat(requestId);
+      if (chat?.request?.status === 'in_progress') {
+        return chat;
+      }
+
+      await new Promise((resolve) => window.setTimeout(resolve, 300));
+    }
+
+    return null;
+  }
+
   async function handleHelpClick() {
     const requestId = Number(id);
 
@@ -97,7 +98,12 @@ export default function RequestDetail() {
 
       const existingChat = await findRequestChat(requestId);
       if (existingChat) {
-        storeRequestStatus(requestId, 'in_progress');
+        if (existingChat.request?.status !== 'in_progress') {
+          setChatError('הצ׳אט כבר קיים, אבל השרת עדיין לא סימן את הבקשה כבטיפול');
+          setStartingChat(false);
+          return;
+        }
+
         navigate(`/chats/${existingChat.id}`);
         return;
       }
@@ -116,14 +122,13 @@ export default function RequestDetail() {
           }
 
           try {
-            const chat = await findRequestChat(requestId);
+            const chat = await waitForRequestChat(requestId);
             if (!chat) {
-              setChatError('הצ׳אט נפתח, אבל לא הצלחנו למצוא אותו ברשימת השיחות');
+              setChatError('הצ׳אט נפתח, אבל השרת עדיין לא סימן את הבקשה כבטיפול');
               setStartingChat(false);
               return;
             }
 
-            storeRequestStatus(requestId, 'in_progress');
             navigate(`/chats/${chat.id}`);
           } catch (error) {
             console.error('Failed to find created chat:', error);

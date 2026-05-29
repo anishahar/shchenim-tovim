@@ -77,7 +77,7 @@ export const UPDATE_LAST_READ_TIMESTAMP = `
 `;
 
 export const GET_UNREAD_MESSAGES_AMOUNT = `
-    SELECT COUNT(*) AS "unreadMessages"
+    SELECT COUNT(*) AS "unreadMessagesAmount"
     FROM messages m
     JOIN chats c ON c.id = m.chat_id
     WHERE c.id = $1

@@ -6,20 +6,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { Request } from "@typesLib";
 
-const REQUEST_STATUS_OVERRIDES_KEY = 'requestStatusOverrides';
-
-function getStoredRequestStatus(requestId: number): string | undefined {
-  try {
-    const raw = localStorage.getItem(REQUEST_STATUS_OVERRIDES_KEY);
-    if (!raw) return undefined;
-
-    const statuses = JSON.parse(raw) as Record<string, string>;
-    return statuses[String(requestId)];
-  } catch {
-    return undefined;
-  }
-}
-
 export default function RequestsList() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -79,11 +65,7 @@ export default function RequestsList() {
   const normalizedFilter = textFilter.trim().toLowerCase();
 
   const filteredRequests = requests.filter((request) => {
-    const status =
-      request.status === 'open'
-        ? request.status
-        : getStoredRequestStatus(request.id) ?? request.status;
-    const matchesStatus = status === 'open';
+    const matchesStatus = request.status === 'open';
     const matchesText = !normalizedFilter ||
       [request.title, request.description, request.locationText, request.category, request.user.name]
         .filter(Boolean)
