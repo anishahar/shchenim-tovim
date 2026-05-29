@@ -48,7 +48,6 @@ export const GET_REQUESTS = `
 
         FROM requests r
         JOIN users u ON r.user_id = u.id
-        WHERE r.status != 'completed'
         AND NOT u.is_blocked
     ) t
 `;

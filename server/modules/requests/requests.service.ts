@@ -7,7 +7,7 @@ class RequestsService {
         try {
             const { longitude, latitude } = await usersService.getUserDetails(userId);
             return (await requestsRepository.getRequests(longitude, latitude)).filter((request) =>
-                request.distance <= radius && request.user.id !== userId
+                request.distance <= radius && request.user.id !== userId && request.status !== 'completed'
             )
         } catch (error) {
             console.error('error in getRequests:', error, 'layer: service');
@@ -18,6 +18,7 @@ class RequestsService {
     getRequestByIdForUser = async (requestId: number, userId: number) => {
         try {
             const { longitude, latitude } = await usersService.getUserDetails(userId);
+
             const request = await requestsRepository.getRequestByIdForUser(requestId, longitude, latitude);
             if (!request) throw new Error("not found");
 
