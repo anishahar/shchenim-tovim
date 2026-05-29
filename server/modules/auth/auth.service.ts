@@ -14,9 +14,9 @@ class AuthService {
         addressText: string,
         latitude: number,
         longitude: number,
-        city?: string,
-        street?: string,
-        streetNumber?: string,
+        city: string,
+        street: string,
+        streetNumber: string,
         apartment?: string
     ) => {
         try {

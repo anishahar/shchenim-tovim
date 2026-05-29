@@ -9,14 +9,13 @@ export interface User {
     avatarUrl?: string;
     phone?: string;
 
-    // Address fields (backward compatible)
     addressText?: string;    // Legacy single field
-    city?: string;           // New separate fields
-    street?: string;
-    streetNumber?: string;
+    city: string;
+    street: string;
+    streetNumber: string;
     apartment?: string;
-    latitude?: number;
-    longitude?: number;
+    latitude: number;
+    longitude: number;
 
     createdAt: Date;
     updatedAt: Date;

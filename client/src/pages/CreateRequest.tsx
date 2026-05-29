@@ -10,8 +10,8 @@ type CreateRequestData = {
   urgency: string;
   latitude: number | null;
   longitude: number | null;
-  image_url: string | null;
-  location_text: string;
+  imageUrl: string | null;
+  locationText: string;
 };
 
 export default function CreateRequest() {
@@ -29,7 +29,7 @@ export default function CreateRequest() {
   //Geocoding function using Google Maps API
   const geocodeLocation = async (locationText: string): Promise<{ lat: number; lng: number }> => {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
-    if (!apiKey) 
+    if (!apiKey)
       throw new Error('Missing Google Maps API key');
 
     const cleaned = locationText.trim();
@@ -108,24 +108,24 @@ export default function CreateRequest() {
       alert('אנא התחבר כדי ליצור בקשה');
       return;
     }
-    
-       
+
+
     try {
       //Geocode the location text to get lat and lng
       const coords = await geocodeLocation(locationText);
       console.log('Geocoded coordinates:', coords);
       //build data 
       const dataToSend: CreateRequestData = {
-      title,
-      description,
-      category,
-      urgency,
-      latitude: coords.lat,
-      longitude: coords.lng,
-      image_url: image || null,
-      location_text: locationText,
-    };
-    console.log('Submitting request:', dataToSend);
+        title,
+        description,
+        category,
+        urgency,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        imageUrl: image || null,
+        locationText: locationText,
+      };
+      console.log('Submitting request:', dataToSend);
       //sends data 
       const response = await api.post('/requests', dataToSend);
       //Note: the requests.controller.ts specifies the response as RETURNING id, title, status;
@@ -147,13 +147,13 @@ export default function CreateRequest() {
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
           <h1 className="text-3xl font-bold text-blue-700 text-center">בקשה חדשה</h1>
           <p className="text-gray-600 text-center mt-2 mb-8">
-           טופס בקשה
+            טופס בקשה
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                כותרת 
+                כותרת
               </label>
               <input
                 id="title"
@@ -247,16 +247,16 @@ export default function CreateRequest() {
                 />
               </div>
               {image && (
-              <button
-                type="button"
-                className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
-                onClick={() => {
-                  setImage('');
-                  setUploadResetKey((prev) => prev + 1); {/*react ahhhhh trick*/}
-                }}
-              >
-                מחק
-              </button>
+                <button
+                  type="button"
+                  className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
+                  onClick={() => {
+                    setImage('');
+                    setUploadResetKey((prev) => prev + 1); {/*react ahhhhh trick*/ }
+                  }}
+                >
+                  מחק
+                </button>
               )}
             </div>
 

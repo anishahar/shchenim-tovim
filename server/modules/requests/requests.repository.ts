@@ -1,18 +1,32 @@
 import { pool } from "../../db.js";
-import { GET_BY_ID, UPDATE_REQUEST_STATUS } from "./requests.db.js";
+import { GET_BY_ID, GET_REQUESTS, UPDATE_REQUEST_STATUS } from "./requests.db.js";
+import { Request } from "@typesLib";
 
 
 class RequestsRepository {
-    //needs parsinggggggg
-    getById = async (requestId: number) => {
+
+    getRequests = async (longitude: number, latitude: number) => {
         try {
-            const result = await pool.query
+            const result = await pool.query<Request>
                 (
-                    GET_BY_ID, [requestId]
+                    GET_REQUESTS, [latitude, longitude]
+                );
+            return result.rows
+        } catch (error) {
+            console.error('error in getRequests:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
+    getRequestByIdForUser = async (requestId: number, longitude: number, latitude: number) => {
+        try {
+            const result = await pool.query<Request>
+                (
+                    GET_BY_ID, [latitude, longitude, requestId]
                 );
             return result.rows[0]
         } catch (error) {
-            console.error('error in getById:', error, 'layer: repository');
+            console.error('error in getRequestByIdForUser:', error, 'layer: repository');
             throw error;
         }
     }
