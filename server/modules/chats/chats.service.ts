@@ -43,7 +43,7 @@ class ChatsService {
             const request = await requestsService.getRequestByIdForUser(requestId, helperId);
             const { id: chatId } = await chatsRepository.newChat(requestId, helperId, request.user.id);
 
-            requestsService.requestStatusInProgress(requestId);
+            await requestsService.requestStatusInProgress(requestId);
             return { chatId, otherUserId: request.user.id };
         } catch (error) {
             console.error('error in newRequestChat:', error, 'layer: service');
@@ -104,6 +104,17 @@ class ChatsService {
                 userId,
                 error,
             }, 'layer: service');
+            throw error;
+        }
+    }
+
+    deleteChat = async (chatId: number, userId: number) => {
+        try {
+            const chat = await this.getChatByIdForUser(chatId, userId);
+            if (!chat) throw new Error('Not a member');
+            await chatsRepository.deleteChat(chatId);
+        } catch (error) {
+            console.error('error in deleteChat:', error, 'layer: service');
             throw error;
         }
     }

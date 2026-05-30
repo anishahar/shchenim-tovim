@@ -84,6 +84,29 @@ class RatingController {
             return res.status(500).json({ error: "Internal server error while fetching user rating" });
         }
     }
+
+    getTopRated = async (_req: Request, res: Response) => {
+        try {
+            const result = await pool.query(`
+                SELECT
+                    u.id,
+                    u.name,
+                    u.avatar_url AS "avatarUrl",
+                    ROUND(AVG(r.score)::numeric, 1)::float8 AS average,
+                    COUNT(r.id)::int AS count
+                FROM users u
+                JOIN ratings r ON r.rated_user_id = u.id
+                WHERE NOT u.is_blocked
+                GROUP BY u.id, u.name, u.avatar_url
+                ORDER BY average DESC, count DESC
+                LIMIT 5
+            `);
+            return res.json(result.rows);
+        } catch (err) {
+            console.error('Error in getTopRated:', err);
+            return res.status(500).json({ error: 'Failed to fetch top rated users' });
+        }
+    }
 }
 
 export const ratingController = new RatingController();

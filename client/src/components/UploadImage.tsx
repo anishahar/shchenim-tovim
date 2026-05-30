@@ -71,8 +71,8 @@ export default function UploadImage({ onUploadSuccess, onUploadError }: UploadIm
           file:mr-4 file:py-2 file:px-4
           file:rounded-md file:border-0
           file:text-sm file:font-medium
-          file:bg-blue-50 file:text-blue-700
-          hover:file:bg-blue-100
+          file:bg-teal-50 file:text-teal-700 file:font-semibold file:rounded-md
+          hover:file:bg-teal-100
           disabled:opacity-50 disabled:cursor-not-allowed"
       />
 

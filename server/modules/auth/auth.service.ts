@@ -60,15 +60,13 @@ class AuthService {
             const user = await authRepository.findUser(email);
             if (!user) throw createError(401, "User doesn't exist");
 
-            // Compare password with bcrypt
+            if (user.is_blocked) {
+                throw createError(403, 'Account has been blocked');
+            }
+
             const passwordMatch = await bcrypt.compare(password, user.password_hash);
             if (!passwordMatch) {
                 throw createError(401, 'Invalid password');
-            }
-
-            // Check if user is blocked
-            if (user.is_blocked) {
-                throw createError(403, 'Account has been blocked');
             }
 
             // Create JWT token

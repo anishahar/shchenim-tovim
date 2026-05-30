@@ -86,6 +86,10 @@ class RequestController {
             const { id } = req.params;
             const { status, title, description, category, urgency, latitude, longitude } = req.body;
 
+            if (status === 'completed') {
+                return res.status(400).json({ error: 'Use POST /chats/:id/complete to complete a request' });
+            }
+
             if (!req.user) return res.status(401);
             const userId = req.user.id;
 
@@ -132,10 +136,72 @@ class RequestController {
             if (check.rows[0].user_id !== userId) return res.status(403).json({ error: 'Unauthorized' });
 
             await pool.query('DELETE FROM requests WHERE id = $1', [id]);
-            return res.status(200);
+            return res.status(200).json({ message: 'Request deleted' });
         } catch (err) {
             console.error('Error deleting request:', err);
             return res.status(500).json({ error: 'Deletion failed' });
+        }
+    }
+
+    // GET /api/requests/my - Get all non-completed requests belonging to the current user
+    getMyRequests = async (req: any, res: Response) => {
+        try {
+            const userId = req.user.id;
+            const result = await pool.query(
+                `SELECT r.*, u.name as user_name, u.avatar_url
+                 FROM requests r
+                 JOIN users u ON r.user_id = u.id
+                 WHERE r.user_id = $1 AND r.status != 'completed'
+                 ORDER BY r.created_at DESC`,
+                [userId]
+            );
+
+            const formattedData = result.rows.map(row => ({
+                id: row.id,
+                title: row.title,
+                description: row.description,
+                category: row.category,
+                urgency: row.urgency,
+                status: row.status,
+                location_text: row.location_text,
+                image_url: row.image_url,
+                created_at: row.created_at,
+            }));
+
+            return res.status(200).json(formattedData);
+        } catch (err) {
+            console.error('Error fetching user requests:', err);
+            return res.status(500).json({ error: 'Server error while fetching your requests' });
+        }
+    }
+
+    getByCity = async (req: Request, res: Response) => {
+        try {
+            const { city } = req.query;
+            if (!city || typeof city !== 'string') {
+                return res.status(400).json({ error: 'City is required' });
+            }
+            const result = await pool.query(`
+                SELECT
+                    r.id,
+                    r.title,
+                    r.description,
+                    r.urgency,
+                    r.category,
+                    r.created_at AS "createdAt",
+                    u.name AS "userName"
+                FROM requests r
+                JOIN users u ON r.user_id = u.id
+                WHERE r.status = 'open'
+                  AND u.city = $1
+                  AND NOT u.is_blocked
+                ORDER BY r.created_at DESC
+                LIMIT 10
+            `, [city]);
+            return res.json(result.rows);
+        } catch (err) {
+            console.error('Error in getByCity:', err);
+            return res.status(500).json({ error: 'Failed to fetch requests' });
         }
     }
 };

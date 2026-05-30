@@ -34,6 +34,9 @@ class AuthController {
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    city: user.city,
+                    avatarUrl: user.avatar_url ?? null,
+                    phone: user.phone ?? null,
                 },
             });
         } catch (error) {
@@ -59,6 +62,9 @@ class AuthController {
                     name: user.name,
                     email: user.email,
                     role: user.role,
+                    city: user.city,
+                    avatarUrl: user.avatar_url ?? null,
+                    phone: user.phone ?? null,
                 },
             })
         } catch (error: any) {

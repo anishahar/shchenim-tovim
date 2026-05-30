@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import api from '../api';
 import type { UserRole } from '@typesLib';
 import { validateCity, validateCityAndStreet, validateFullAddress } from '../utils/geocoding';
 
@@ -71,30 +72,21 @@ export default function Register() {
         }, ${formData.city}`;
 
       // Register user (role is always 'resident' by default)
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone,
-          city: formData.city,
-          street: formData.street,
-          streetNumber: formData.streetNumber,
-          apartment: formData.apartment || undefined,
-          addressText: address_text,
-          latitude: location.lat,
-          longitude: location.lng,
-        }),
+      const response = await api.post('/auth/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        city: formData.city,
+        street: formData.street,
+        streetNumber: formData.streetNumber,
+        apartment: formData.apartment || undefined,
+        addressText: address_text,
+        latitude: location.lat,
+        longitude: location.lng,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       login(data.token, data.user);
       navigate('/');
     } catch (err: any) {
@@ -105,9 +97,9 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4" dir="rtl">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-4" dir="rtl">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border-t-4 border-teal-500 p-8">
+        <h1 className="text-3xl font-bold text-center mb-6 text-teal-700">
           הרשמה
         </h1>
 
@@ -277,7 +269,7 @@ export default function Register() {
 
         <p className="text-center mt-4 text-sm text-gray-600">
           כבר יש לך חשבון?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
+          <Link to="/login" className="text-teal-600 hover:text-teal-700 hover:underline font-medium">
             התחבר
           </Link>
         </p>

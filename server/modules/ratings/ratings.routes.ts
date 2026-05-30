@@ -18,4 +18,6 @@ router.post('/', authenticateToken, ratingController.saveRating);
  */
 router.get('/average/:userId', ratingController.getUserAverage);
 
+router.get('/top', ratingController.getTopRated);
+
 export default router;

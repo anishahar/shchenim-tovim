@@ -11,12 +11,48 @@ const ROLE_NAMES = {
   area_manager: 'מנהל אזור',
 };
 
+const CATEGORY_COLORS: Record<string, string> = {
+  shopping:     'bg-sky-100 text-sky-700',
+  elderly_care: 'bg-violet-100 text-violet-700',
+  moving:       'bg-amber-100 text-amber-700',
+  repairs:      'bg-orange-100 text-orange-700',
+  pet_care:     'bg-emerald-100 text-emerald-700',
+  other:        'bg-slate-100 text-slate-600',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  shopping: 'קניות',
+  elderly_care: 'סיוע לקשישים',
+  moving: 'הובלה',
+  repairs: 'תיקונים',
+  pet_care: 'טיפול בחיות',
+  other: 'אחר',
+};
+
+const URGENCY_LABELS: Record<string, string> = {
+  high: 'דחיפות גבוהה',
+  medium: 'דחיפות בינונית',
+  low: 'דחיפות נמוכה',
+};
+
+const URGENCY_CLASSES: Record<string, string> = {
+  high: 'bg-red-100 text-red-700',
+  medium: 'bg-yellow-100 text-yellow-700',
+  low: 'bg-green-100 text-green-700',
+};
+
 export default function Profile() {
   const { user: authUser, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [myRating, setMyRating] = useState<{ average: number; count: number } | null>(null);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [editingRequestId, setEditingRequestId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', urgency: '' });
+  const [editLoading, setEditLoading] = useState(false);
   const [uploadResetKey, setUploadResetKey] = useState(0);
 
   const [formData, setFormData] = useState({
@@ -37,6 +73,10 @@ export default function Profile() {
   useEffect(() => {
     if (authUser?.id) {
       fetchProfile();
+      fetchMyRequests();
+      api.get(`/ratings/average/${authUser.id}`)
+        .then((res) => setMyRating({ average: res.data.average, count: res.data.count }))
+        .catch(() => {});
     }
   }, [authUser]);
 
@@ -75,6 +115,52 @@ export default function Profile() {
       }
     } catch (err) {
       setError('שגיאה בטעינת הפרופיל');
+    }
+  };
+
+  const fetchMyRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      const response = await api.get('/requests/my');
+      setMyRequests(response.data);
+    } catch (err) {
+      // silently fail — not critical
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  const handleDeleteRequest = async (id: number) => {
+    try {
+      await api.delete(`/requests/${id}`);
+      await fetchMyRequests();
+      setSuccess('הבקשה נמחקה בהצלחה');
+    } catch (err) {
+      setError('שגיאה במחיקת הבקשה');
+    }
+  };
+
+  const startEditRequest = (request: any) => {
+    setEditingRequestId(request.id);
+    setEditForm({ title: request.title, description: request.description, urgency: request.urgency });
+  };
+
+  const handleSaveRequest = async (id: number) => {
+    setEditLoading(true);
+    try {
+      await api.patch(`/requests/${id}`, {
+        title: editForm.title,
+        description: editForm.description,
+        urgency: editForm.urgency,
+      });
+      setMyRequests((prev) =>
+        prev.map((r) => r.id === id ? { ...r, ...editForm } : r)
+      );
+      setEditingRequestId(null);
+    } catch (err) {
+      setError('שגיאה בעדכון הבקשה');
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -164,11 +250,11 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4" dir="rtl">
+    <div className="min-h-screen bg-slate-50 py-10 px-4" dir="rtl">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
+          <div className="bg-gradient-to-r from-blue-700 via-blue-600 to-teal-500 px-8 py-6">
             <div className="flex items-center gap-6">
               {/* Avatar */}
               <div className="relative">
@@ -179,7 +265,7 @@ export default function Profile() {
                     className="w-24 h-24 rounded-full border-4 border-white object-cover"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-full border-4 border-white bg-blue-500 flex items-center justify-center text-white text-3xl font-bold">
+                  <div className="w-24 h-24 rounded-full border-4 border-white bg-teal-500 flex items-center justify-center text-white text-3xl font-bold">
                     {formData.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -191,6 +277,11 @@ export default function Profile() {
                 <p className="text-blue-100 mt-1">{formData.email}</p>
                 <span className="inline-block mt-2 px-3 py-1 bg-white/20 rounded-full text-sm">
                   {ROLE_NAMES[formData.role as keyof typeof ROLE_NAMES]}
+                </span>
+                <span className="inline-block mt-2 mr-2 px-3 py-1 bg-white/20 rounded-full text-sm">
+                  {myRating && myRating.count > 0
+                    ? `★ ${myRating.average.toFixed(1)} (${myRating.count} דירוגים)`
+                    : '★ לא מדורג'}
                 </span>
               </div>
 
@@ -358,7 +449,7 @@ export default function Profile() {
                           setFormData({ ...formData, avatarUrl: '' });
                           setUploadResetKey((prev) => prev + 1);
                         }}
-                        className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                        className="bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
                       >
                         מחק תמונה
                       </button>
@@ -433,6 +524,114 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* My Open Requests */}
+        <div className="mt-8 bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+          <div className="px-8 py-5 border-b border-blue-100 bg-blue-50">
+            <h2 className="text-xl font-bold text-gray-800 border-r-4 border-amber-500 pr-3">הבקשות הפתוחות שלי</h2>
+          </div>
+          <div className="p-6">
+            {requestsLoading ? (
+              <p className="text-center text-gray-500">טוען...</p>
+            ) : myRequests.length === 0 ? (
+              <p className="text-center text-gray-500">אין בקשות פתוחות</p>
+            ) : (
+              <ul className="space-y-4">
+                {myRequests.map((request) => {
+                  const isEditingThis = editingRequestId === request.id;
+                  return (
+                    <li key={request.id} className="border border-gray-100 rounded-xl border-r-4 border-r-blue-300 p-5 hover:shadow-md hover:border-blue-100 transition-all">
+                      {isEditingThis ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">שם הבקשה</label>
+                            <input
+                              type="text"
+                              value={editForm.title}
+                              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">תיאור</label>
+                            <textarea
+                              value={editForm.description}
+                              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                              rows={3}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">רמת דחיפות</label>
+                            <select
+                              value={editForm.urgency}
+                              onChange={(e) => setEditForm({ ...editForm, urgency: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="low">דחיפות נמוכה</option>
+                              <option value="medium">דחיפות בינונית</option>
+                              <option value="high">דחיפות גבוהה</option>
+                            </select>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => handleSaveRequest(request.id)}
+                              disabled={editLoading}
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded-lg transition-colors disabled:bg-blue-300"
+                            >
+                              {editLoading ? 'שומר...' : 'שמור'}
+                            </button>
+                            <button
+                              onClick={() => setEditingRequestId(null)}
+                              disabled={editLoading}
+                              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium py-2 rounded-lg transition-colors"
+                            >
+                              ביטול
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-start mb-2">
+                            <h3 className="text-lg font-semibold text-gray-800">{request.title}</h3>
+                            <div className="flex items-center gap-2">
+                              {request.category && (
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[request.category] ?? 'bg-slate-100 text-slate-600'}`}>
+                                  {CATEGORY_LABELS[request.category] ?? request.category}
+                                </span>
+                              )}
+                              <span className={`text-xs px-2 py-1 rounded-full font-medium ${URGENCY_CLASSES[request.urgency] ?? 'bg-gray-100 text-gray-600'}`}>
+                                {URGENCY_LABELS[request.urgency] ?? request.urgency}
+                              </span>
+                              <button
+                                onClick={() => startEditRequest(request)}
+                                className="text-blue-500 hover:text-blue-700 transition-colors text-sm px-2 py-1 rounded hover:bg-blue-50"
+                                title="ערוך בקשה"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRequest(request.id)}
+                                className="text-red-500 hover:text-red-700 transition-colors text-sm px-2 py-1 rounded hover:bg-red-50"
+                                title="מחק בקשה"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                          <p className="text-gray-600 text-sm mb-2">{request.description}</p>
+                          {request.location_text && (
+                            <p className="text-gray-400 text-xs">📍 {request.location_text}</p>
+                          )}
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         </div>

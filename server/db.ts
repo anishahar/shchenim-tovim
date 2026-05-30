@@ -100,6 +100,7 @@ WHERE request_id IS NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS unique_chat_per_request
 ON chats(LEAST(user1_id, user2_id), GREATEST(user1_id, user2_id), request_id)
 WHERE request_id IS NOT NULL;
+
 `;
 
 // Initialize database schema

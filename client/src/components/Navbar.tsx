@@ -5,11 +5,11 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   return (
-    <nav className=" sticky top-0 z-50 bg-white shadow-md" dir="rtl">
+    <nav className="sticky top-0 z-50 bg-gradient-to-l from-blue-700 to-blue-600 shadow-lg" dir="rtl">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Title - Right side */}
-          <Link to="/" className="text-2xl font-bold text-blue-600 hover:text-blue-700">
+          <Link to="/" className="text-2xl font-extrabold text-white hover:text-blue-100 transition-colors">
             שכנים טובים
           </Link>
 
@@ -17,19 +17,19 @@ export default function Navbar() {
           <div className="flex items-center gap-6">
             <Link
               to="/requests"
-              className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              className="text-blue-100 hover:text-white font-medium transition-colors"
             >
               בקשות
             </Link>
             <Link
               to="/chats"
-              className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              className="text-blue-100 hover:text-white font-medium transition-colors"
             >
               צ'אטים
             </Link>
             <Link
               to="/announcements"
-              className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+              className="text-blue-100 hover:text-white font-medium transition-colors"
             >
               מודעות
             </Link>
@@ -38,7 +38,7 @@ export default function Navbar() {
             {user?.role === 'area_manager' && (
               <Link
                 to="/admin"
-                className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                className="text-blue-100 hover:text-white font-medium transition-colors"
               >
                 ניהול
               </Link>
@@ -46,31 +46,31 @@ export default function Navbar() {
 
             {/* Auth Section */}
             {user ? (
-              <div className="flex items-center gap-4 mr-4 border-r border-gray-300 pr-4">
+              <div className="flex items-center gap-4 mr-4 border-r border-blue-400 pr-4">
                 <Link
                   to="/profile"
-                  className="text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                  className="text-blue-100 hover:text-white font-medium transition-colors"
                 >
                   👤 {user.name}
                 </Link>
                 <button
                   onClick={logout}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-semibold transition-colors"
                 >
                   התנתק
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-3 mr-4 border-r border-gray-300 pr-4">
+              <div className="flex items-center gap-3 mr-4 border-r border-blue-400 pr-4">
                 <Link
                   to="/login"
-                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  className="text-blue-100 hover:text-white font-medium transition-colors"
                 >
                   התחבר
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="bg-white text-blue-700 hover:bg-blue-50 px-4 py-2 rounded-md text-sm font-semibold transition-colors"
                 >
                   הירשם
                 </Link>

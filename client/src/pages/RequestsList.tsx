@@ -1,10 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api";
-import { Circle, GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { Request } from "@typesLib";
+
+const CATEGORY_COLORS: Record<string, string> = {
+  shopping:     'bg-sky-100 text-sky-700',
+  elderly_care: 'bg-violet-100 text-violet-700',
+  moving:       'bg-amber-100 text-amber-700',
+  repairs:      'bg-orange-100 text-orange-700',
+  pet_care:     'bg-emerald-100 text-emerald-700',
+  other:        'bg-slate-100 text-slate-600',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  shopping: 'קניות',
+  elderly_care: 'סיוע לקשישים',
+  moving: 'הובלה',
+  repairs: 'תיקונים',
+  pet_care: 'טיפול בחיות',
+  other: 'אחר',
+};
 
 export default function RequestsList() {
   const [requests, setRequests] = useState<Request[]>([]);
@@ -13,6 +31,7 @@ export default function RequestsList() {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [urgencyFilter, setUrgencyFilter] = useState<string>("");
   const [radiusFilter, setRadiusFilter] = useState<number>(50);
+  const [radiusInput, setRadiusInput] = useState<string>("50");
   const [userCoords, setUserCoords] = useState<userCords | null>(null);
 
   //Get current user from context
@@ -46,11 +65,7 @@ export default function RequestsList() {
   }
 
   useEffect(() => {
-    api.get("/requests", {
-      params: {
-        radius: radiusFilter
-      }
-    })
+    api.get("/requests", { params: { radius: 9999 } })
       .then((response) => {
         setRequests(response.data);
         setLoading(false);
@@ -59,35 +74,63 @@ export default function RequestsList() {
         console.error("Error fetching requests:", error);
         setLoading(false);
       });
-  }, [radiusFilter]);
+  }, []);
 
   //Filter based on text
   const normalizedFilter = textFilter.trim().toLowerCase();
 
   const filteredRequests = requests.filter((request) => {
     const matchesStatus = request.status === 'open';
+    const matchesRadius = request.distance <= radiusFilter;
     const matchesText = !normalizedFilter ||
       [request.title, request.description, request.locationText, request.category, request.user.name]
         .filter(Boolean)
         .join(" ")
         .toLowerCase()
         .includes(normalizedFilter);
-    //Filter based on urgency
     const matchesUrgency = !urgencyFilter || request.urgency === urgencyFilter;
-    //Filter based on category
     const matchesCategory = !categoryFilter || request.category === categoryFilter;
 
-    return matchesStatus && matchesText && matchesUrgency && matchesCategory;
+    return matchesStatus && matchesRadius && matchesText && matchesUrgency && matchesCategory;
   });
 
   const center = useMemo(() => {
     if (!userCoords) return undefined;
-
-    return {
-      lat: userCoords.userLat,
-      lng: userCoords.userLng,
-    };
+    return { lat: userCoords.userLat, lng: userCoords.userLng };
   }, [userCoords]);
+
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const circleRef = useRef<google.maps.Circle | null>(null);
+
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current || !center) return;
+
+    circleRef.current?.setMap(null);
+    circleRef.current = new window.google.maps.Circle({
+      map: mapRef.current,
+      center,
+      radius: radiusFilter * 1000,
+      fillColor: "#a6b6c6",
+      fillOpacity: 0.2,
+      strokeColor: "#73889c",
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
+    });
+
+    return () => {
+      circleRef.current?.setMap(null);
+      circleRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapRef.current, center]);
+
+  useEffect(() => {
+    circleRef.current?.setRadius(radiusFilter * 1000);
+  }, [radiusFilter]);
 
   //Map only requests with valid coordinates
   const markerRequests = filteredRequests
@@ -101,9 +144,9 @@ export default function RequestsList() {
 
   return (
     <div className="flex gap-6" dir="ltr">
-      <div className="min-h-screen  bg-gray-50 py-10 px-4 flex-1" dir="rtl">
+      <div className="min-h-screen bg-slate-50 py-10 px-4 flex-1" dir="rtl">
         <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 border-t-4 border-t-blue-600 p-6 sm:p-8">
             <h1 className="text-3xl font-bold text-blue-700 text-center mb-8">רשימת בקשות</h1>
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <input
@@ -130,16 +173,22 @@ export default function RequestsList() {
 
                 <input
                   type="number"
-                  value={radiusFilter}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setRadiusFilter(Number(e.target.value))
-                  }
+                  value={radiusInput}
+                  onChange={(e) => setRadiusInput(e.target.value)}
+                  onBlur={() => {
+                    const val = Number(radiusInput);
+                    if (val > 0) setRadiusFilter(val);
+                    else setRadiusInput(String(radiusFilter));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  }}
                   className="
-                    w-full 
+                    w-full
                     sm:w-48
                     border
                     border-gray-300
-                    rounded-lg      
+                    rounded-lg
                     px-3
                     py-2
                     focus:border-gray-500
@@ -174,7 +223,7 @@ export default function RequestsList() {
             <div className="flex justify-center mb-6">
               <button
                 onClick={() => navigate("/requests/new")}
-                className="w-full sm:w-auto bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 transition-colors"
+                className="w-full sm:w-auto bg-teal-600 text-white rounded-lg px-4 py-2 hover:bg-teal-700 transition-colors"
               >
                 בקשה חדשה
               </button>
@@ -187,7 +236,7 @@ export default function RequestsList() {
             ) : (
               <ul className="space-y-4">
                 {filteredRequests.map((request) => (
-                  <li key={request.id} className="border border-gray-200 rounded-lg p-5 hover:shadow-sm transition-shadow">
+                  <li key={request.id} className="border border-gray-100 rounded-xl border-r-4 border-r-blue-300 p-5 hover:shadow-md hover:border-blue-100 transition-all">
                     {/*Go to specific request page*/}
                     <Link
                       to={`/requests/${request.id}`}
@@ -195,20 +244,31 @@ export default function RequestsList() {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <h2 className="text-lg font-semibold text-gray-800">{request.title}</h2>
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${request.urgency === 'high' ? 'bg-red-100 text-red-700' :
-                          request.urgency === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                          {request.urgency === 'high' ? 'דחיפות גבוהה' :
-                            request.urgency === 'medium' ? 'דחיפות בינונית' : 'דחיפות נמוכה'}
-                        </span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[request.category] ?? 'bg-slate-100 text-slate-600'}`}>
+                            {CATEGORY_LABELS[request.category] ?? request.category}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${request.urgency === 'high' ? 'bg-red-100 text-red-700' :
+                            request.urgency === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                            {request.urgency === 'high' ? 'דחיפות גבוהה' :
+                              request.urgency === 'medium' ? 'דחיפות בינונית' : 'דחיפות נמוכה'}
+                          </span>
+                        </div>
                       </div>
                       <p className="text-gray-600 text-sm mb-3">{request.description}</p>
                       {request.locationText && (
                         <p className="text-gray-400 text-xs">📍 {request.locationText}</p>
                       )}
                     </Link>
-                    <p className="text-gray-500 text-xs mt-1">פורסם על ידי: {request.user.name}</p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      פורסם על ידי: {request.user.name}
+                      {request.user.ratingCount > 0
+                        ? <span className="mr-2 text-amber-500 font-medium">★ {request.user.averageRating}</span>
+                        : <span className="mr-2 text-gray-400">לא מדורג</span>
+                      }
+                    </p>
                   </li>
                 ))}
               </ul>
@@ -226,6 +286,7 @@ export default function RequestsList() {
               mapContainerStyle={{ width: '100%', height: '70vh', borderRadius: '8px' }}
               center={center}
               zoom={15}
+              onLoad={onMapLoad}
             >
               {userCoords && (
                 <Marker
@@ -240,18 +301,6 @@ export default function RequestsList() {
                   }}
                 />
               )}
-              {userCoords && <Circle
-                key={`${radiusFilter}-${userCoords}`}
-                center={center}
-                radius={radiusFilter * 1000}
-                options={{
-                  fillColor: "#a6b6c6",
-                  fillOpacity: 0.2,
-                  strokeColor: "#73889c",
-                  strokeOpacity: 0.8,
-                  strokeWeight: 2,
-                }}
-              />}
               {markerRequests.map((request) => (
                 <Marker
                   key={request.id}

@@ -35,11 +35,11 @@ function App() {
         <Navbar />
         <Routes>
           {/* Public routes */}
-          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
           {/* Protected routes */}
+          <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/requests" element={<ProtectedRoute><RequestsList /></ProtectedRoute>} />
           <Route path="/requests/new" element={<ProtectedRoute><CreateRequest /></ProtectedRoute>} />
           <Route path="/requests/:id" element={<ProtectedRoute><RequestDetail /></ProtectedRoute>} />

@@ -39,7 +39,17 @@ export const GET_REQUESTS = `
             json_build_object(
                 'id', u.id,
                 'name', u.name,
-                'avatarUrl', u.avatar_url
+                'avatarUrl', u.avatar_url,
+                'averageRating', (
+                    SELECT ROUND(AVG(rat.score)::numeric, 1)
+                    FROM ratings rat
+                    WHERE rat.rated_user_id = u.id
+                ),
+                'ratingCount', (
+                    SELECT COUNT(*)::int
+                    FROM ratings rat
+                    WHERE rat.rated_user_id = u.id
+                )
             ) as user,
 
             (

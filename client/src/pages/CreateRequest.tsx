@@ -142,9 +142,9 @@ export default function CreateRequest() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4" dir="rtl">
+    <div className="min-h-screen bg-slate-50 py-10 px-4" dir="rtl">
       <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
+        <div className="bg-white rounded-2xl shadow-md border border-gray-100 border-t-4 border-t-blue-600 p-6 sm:p-8">
           <h1 className="text-3xl font-bold text-blue-700 text-center">בקשה חדשה</h1>
           <p className="text-gray-600 text-center mt-2 mb-8">
             טופס בקשה
@@ -161,7 +161,7 @@ export default function CreateRequest() {
                 placeholder="דוגמה: צריך עזרה עם קניות"
                 value={title}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -176,7 +176,7 @@ export default function CreateRequest() {
                 value={description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
                 rows={4}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
                 required
               />
             </div>
@@ -232,7 +232,7 @@ export default function CreateRequest() {
                 placeholder="לדוגמה: רחוב הרצל 10, תל אביב"
                 value={locationText}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocationText(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -249,7 +249,7 @@ export default function CreateRequest() {
               {image && (
                 <button
                   type="button"
-                  className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-4 rounded-md transition-colors"
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
                   onClick={() => {
                     setImage('');
                     setUploadResetKey((prev) => prev + 1); {/*react ahhhhh trick*/ }
@@ -262,7 +262,7 @@ export default function CreateRequest() {
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
             >
               שלח בקשה
             </button>

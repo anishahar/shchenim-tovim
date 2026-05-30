@@ -34,7 +34,22 @@ type ChatApiResponse = Omit<Chat, 'createdAt' | 'updatedAt' | 'refusedHelpAt'> &
 };
 
 type RequestDetailsResponse = {
-  user_id: number;
+  user: { id: number };
+  description: string;
+  category: string;
+  urgency: string;
+};
+
+const URGENCY_LABELS: Record<string, string> = {
+  high: 'דחיפות גבוהה',
+  medium: 'דחיפות בינונית',
+  low: 'דחיפות נמוכה',
+};
+
+const URGENCY_STYLES: Record<string, { background: string; color: string }> = {
+  high:   { background: 'rgba(220,38,38,0.10)',  color: '#dc2626' },
+  medium: { background: 'rgba(217,119,6,0.10)',  color: '#b45309' },
+  low:    { background: 'rgba(22,163,74,0.10)',   color: '#16a34a' },
 };
 
 const STATUS_LABELS: Record<RequestStatus, string> = {
@@ -242,6 +257,88 @@ function SystemNotice({ text, date }: { text: string; date?: Date | null }) {
   );
 }
 
+function RatingModal({
+  helperName,
+  onSubmit,
+  isSubmitting,
+}: {
+  helperName: string;
+  onSubmit: (score: number) => void;
+  isSubmitting: boolean;
+}) {
+  const [hovered, setHovered] = useState(0);
+  const [selected, setSelected] = useState(0);
+  const display = hovered || selected;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+      }}
+    >
+      <div dir="rtl" style={{
+        background: '#fff', borderRadius: 18, padding: '32px 28px',
+        maxWidth: 360, width: '90%', textAlign: 'center',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
+      }}>
+        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1f3f8c', marginBottom: 8 }}>
+          דרג את {helperName}
+        </h2>
+        <p style={{ fontSize: 14, color: '#7a7974', marginBottom: 24 }}>
+          כיצד הייתה חוויית העזרה שלך?
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => setSelected(star)}
+              onMouseEnter={() => setHovered(star)}
+              onMouseLeave={() => setHovered(0)}
+              style={{
+                background: 'none', border: 'none',
+                cursor: isSubmitting ? 'wait' : 'pointer', fontSize: 36,
+                color: star <= display ? '#f5a623' : '#d1cfc9',
+                transition: 'color 0.1s', padding: 0,
+              }}
+            >★</button>
+          ))}
+        </div>
+        <button
+          type="button"
+          disabled={selected === 0 || isSubmitting}
+          onClick={() => onSubmit(selected)}
+          style={{
+            width: '100%', background: selected > 0 ? '#1f3f8c' : '#d1cfc9',
+            color: '#fff', border: 'none', borderRadius: 999, padding: '12px 0',
+            fontSize: 15, fontWeight: 800,
+            cursor: selected > 0 && !isSubmitting ? 'pointer' : 'not-allowed',
+            marginBottom: 10,
+          }}
+        >
+          {isSubmitting ? 'שומר...' : 'שמור דירוג'}
+        </button>
+        <button
+          type="button"
+          disabled={isSubmitting}
+          onClick={() => onSubmit(0)}
+          style={{
+            background: 'none', border: 'none', color: '#7a7974',
+            fontSize: 13, cursor: isSubmitting ? 'wait' : 'pointer',
+            textDecoration: 'underline',
+          }}
+        >
+          דלג, לא עכשיו
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatRoom() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -256,7 +353,10 @@ export default function ChatRoom() {
   const [isSocketConnected, setIsSocketConnected] = useState(socket.connected);
   const [chatMeta, setChatMeta] = useState<ChatMeta | null>(null);
   const [requestOwnerId, setRequestOwnerId] = useState<number | null>(null);
+  const [requestSnippet, setRequestSnippet] = useState<{ description: string; urgency: string; category: string } | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -287,7 +387,12 @@ export default function ChatRoom() {
         const requestResponse = await api.get<RequestDetailsResponse>(
           `/requests/${currentChat.request.id}`
         );
-        setRequestOwnerId(requestResponse.data.user_id);
+        setRequestOwnerId(requestResponse.data.user.id);
+        setRequestSnippet({
+          description: requestResponse.data.description,
+          urgency: requestResponse.data.urgency,
+          category: requestResponse.data.category,
+        });
       } catch (err) {
         console.error('Failed to fetch request owner:', err);
         setRequestOwnerId(null);
@@ -449,6 +554,19 @@ export default function ChatRoom() {
     }
   }
 
+  async function commitCompletion(score: number) {
+    if (!chatMeta?.request) return;
+    try {
+      setIsSubmittingRating(true);
+      await api.post(`/chats/${chatId}/complete`, { score });
+      navigate('/chats');
+    } catch (err) {
+      console.error('Failed to complete request:', err);
+      setSocketError('לא הצלחנו להשלים את הבקשה');
+      setIsSubmittingRating(false);
+    }
+  }
+
   async function handleStatusChange(nextStatus: RequestStatus) {
     if (!chatMeta?.request || nextStatus === chatMeta.request.status) return;
 
@@ -458,6 +576,13 @@ export default function ChatRoom() {
 
     try {
       setIsUpdatingStatus(true);
+
+      if (nextStatus === 'completed') {
+        setIsUpdatingStatus(false);
+        setShowRatingModal(true);
+        return;
+      }
+
       await api.patch(`/requests/${chatMeta.request.id}`, { status: nextStatus });
       setChatMeta((prev) =>
         prev?.request
@@ -470,10 +595,6 @@ export default function ChatRoom() {
             }
           : prev
       );
-
-      if (nextStatus === 'completed') {
-        navigate('/chats');
-      }
     } catch (err) {
       console.error('Failed to update request status:', err);
       setSocketError('לא הצלחנו לעדכן את סטטוס הבקשה');
@@ -491,9 +612,9 @@ export default function ChatRoom() {
 
     try {
       setIsUpdatingStatus(true);
-      await api.patch(`/chats/${chatMeta.id}/refuse-help`);
       await api.patch(`/requests/${chatMeta.request.id}`, { status: 'open' });
-      navigate('/requests');
+      await api.delete(`/chats/${chatId}`);
+      navigate('/chats');
     } catch (err) {
       console.error('Failed to reject request:', err);
       setSocketError('לא הצלחנו לסרב לעזרה');
@@ -687,6 +808,51 @@ export default function ChatRoom() {
           </div>
         )}
 
+        {chatMeta?.request && requestSnippet && (
+          <div
+            style={{
+              padding: '10px 18px',
+              background: '#eff6ff',
+              borderBottom: '1px solid rgba(37,99,235,0.12)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#1f3f8c' }}>
+                📋 {chatMeta.request.title}
+              </span>
+              {requestSnippet.description && (
+                <p style={{
+                  margin: '3px 0 0',
+                  fontSize: 12,
+                  color: '#5e5a53',
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}>
+                  {requestSnippet.description}
+                </p>
+              )}
+            </div>
+            {requestSnippet.urgency && URGENCY_STYLES[requestSnippet.urgency] && (
+              <span style={{
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '3px 8px',
+                borderRadius: 999,
+                flexShrink: 0,
+                ...URGENCY_STYLES[requestSnippet.urgency],
+              }}>
+                {URGENCY_LABELS[requestSnippet.urgency]}
+              </span>
+            )}
+          </div>
+        )}
+
         <main
           role="list"
           aria-label="הודעות"
@@ -779,6 +945,14 @@ export default function ChatRoom() {
           </div>
         </footer>
       </section>
+
+      {showRatingModal && chatMeta && (
+        <RatingModal
+          helperName={chatMeta.otherUser.name}
+          onSubmit={commitCompletion}
+          isSubmitting={isSubmittingRating}
+        />
+      )}
     </div>
   );
 }

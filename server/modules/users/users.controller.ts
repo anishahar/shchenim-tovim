@@ -28,7 +28,7 @@ class UsersController {
     getUserDetailes = async (req: Request, res: Response) => {
         const { data, error } = userIdSchema.safeParse(req)
 
-        if (error) return
+        if (error) return res.status(400).json({ errors: error.errors })
         const { id } = data.params;
 
         try {
@@ -92,7 +92,7 @@ class UsersController {
     blockUser = async (req: Request, res: Response) => {
         const { data, error } = userIdSchema.safeParse(req)
 
-        if (error) return
+        if (error) return res.status(400).json({ errors: error.errors })
         const { id } = data.params;
 
         try {
@@ -111,7 +111,7 @@ class UsersController {
     unblockUser = async (req: Request, res: Response) => {
         const { data, error } = userIdSchema.safeParse(req)
 
-        if (error) return
+        if (error) return res.status(400).json({ errors: error.errors })
         const { id } = data.params;
 
         try {

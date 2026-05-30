@@ -127,6 +127,7 @@ export default function AdminDashboard() {
         justifyContent: 'center',
         padding: '24px 16px',
         boxSizing: 'border-box',
+        background: '#f8fafc',
       }}
     >
       <section
@@ -147,6 +148,7 @@ export default function AdminDashboard() {
             borderRadius: 18,
             padding: 20,
             boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+            borderTop: '4px solid #1f3f8c',
           }}
         >
           <h1
@@ -208,7 +210,7 @@ export default function AdminDashboard() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ background: '#f6f3ef', borderBottom: '1px solid rgba(40,37,29,0.10)' }}>
+                <tr style={{ background: '#eff6ff', borderBottom: '1px solid rgba(40,37,29,0.10)' }}>
                   <th style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, fontSize: 13, color: '#5e5a53' }}>
                     שם
                   </th>
@@ -381,6 +383,7 @@ export default function AdminDashboard() {
               borderRadius: 14,
               padding: '16px 18px',
               boxShadow: '0 6px 18px rgba(0,0,0,0.04)',
+              borderTop: '3px solid #1f3f8c',
             }}
           >
             <div style={{ fontSize: 12, color: '#7a7974', marginBottom: 4 }}>סך הכל משתמשים</div>
@@ -394,6 +397,7 @@ export default function AdminDashboard() {
               borderRadius: 14,
               padding: '16px 18px',
               boxShadow: '0 6px 18px rgba(0,0,0,0.04)',
+              borderTop: '3px solid #dc2626',
             }}
           >
             <div style={{ fontSize: 12, color: '#7a7974', marginBottom: 4 }}>משתמשים חסומים</div>
@@ -409,6 +413,7 @@ export default function AdminDashboard() {
               borderRadius: 14,
               padding: '16px 18px',
               boxShadow: '0 6px 18px rgba(0,0,0,0.04)',
+              borderTop: '3px solid #16a34a',
             }}
           >
             <div style={{ fontSize: 12, color: '#7a7974', marginBottom: 4 }}>משתמשים פעילים</div>

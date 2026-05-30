@@ -4,7 +4,10 @@ export type RequestStatus = 'open' | 'in_progress' | 'completed';
 export type RequestUrgency = 'low' | 'medium' | 'high';
 export interface Request {
     id: number;
-    user: Pick<User, 'id' | 'name' | 'avatarUrl'>;
+    user: Pick<User, 'id' | 'name' | 'avatarUrl'> & {
+        averageRating: number | null;
+        ratingCount: number;
+    };
     title: string;
     description: string;
     category: string;

@@ -10,4 +10,8 @@ chatsRouter.get('/:id/messages', authenticateToken, chatsController.getChatMessa
 
 chatsRouter.patch('/:id/mark-as-read', authenticateToken, chatsController.updateLastReadTime);
 
-chatsRouter.patch('/:id/refuse-help', authenticateToken, chatsController.refuseHelp); 
+chatsRouter.patch('/:id/refuse-help', authenticateToken, chatsController.refuseHelp);
+
+chatsRouter.post('/:id/complete', authenticateToken, chatsController.completeChat);
+
+chatsRouter.delete('/:id', authenticateToken, chatsController.deleteChat);

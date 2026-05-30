@@ -90,6 +90,15 @@ class ChatsRepository {
         }
     }
 
+    deleteChat = async (chatId: number) => {
+        try {
+            await pool.query('DELETE FROM chats WHERE id = $1', [chatId]);
+        } catch (error) {
+            console.error('error in deleteChat:', error, 'layer: repository');
+            throw error;
+        }
+    }
+
     getUnreadMessagesAmount = async (chatId: number, userId: number) => {
         try {
             const res = await pool.query<{ unreadMessagesAmount: number }>

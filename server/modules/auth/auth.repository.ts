@@ -5,7 +5,7 @@ class AuthRepository {
     findUser = async (email: string) => {
         try {
             // Check if user already exists by email
-            const user = await pool.query<{ id: number, name: string, email: string, password_hash: string, role: string, is_blocked: boolean }>(
+            const user = await pool.query<{ id: number, name: string, email: string, password_hash: string, role: string, is_blocked: boolean, city: string, avatar_url: string | null, phone: string | null }>(
                 FIND_USER_BY_EMAIL, [email]
             );
 
@@ -31,7 +31,7 @@ class AuthRepository {
         apartment?: string
     ) => {
         try {
-            const result = await pool.query<{ id: number, name: string, email: string, role: string }>(
+            const result = await pool.query<{ id: number, name: string, email: string, role: string, city: string, avatar_url: string | null, phone: string | null }>(
                 INSERT_USER, [name, email, passwordHash, role, phone, addressText, latitude, longitude, city, street, streetNumber, apartment || null]
             );
 

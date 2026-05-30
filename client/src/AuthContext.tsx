@@ -13,29 +13,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function loadStoredUser(): User | null {
+  try {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load user and token from localStorage on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
-
-    setIsLoading(false);
-  }, []);
+  const [user, setUser] = useState<User | null>(loadStoredUser);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
+  const isLoading = false;
 
   useEffect(() => {
     if (!token) {

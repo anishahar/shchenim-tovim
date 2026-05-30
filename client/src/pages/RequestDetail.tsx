@@ -20,6 +20,24 @@ type ChatApiResponse = {
 
 const HELP_MESSAGE = "היי, אני אעזור";
 
+const CATEGORY_COLORS: Record<string, string> = {
+  shopping:     'bg-sky-100 text-sky-700',
+  elderly_care: 'bg-violet-100 text-violet-700',
+  moving:       'bg-amber-100 text-amber-700',
+  repairs:      'bg-orange-100 text-orange-700',
+  pet_care:     'bg-emerald-100 text-emerald-700',
+  other:        'bg-slate-100 text-slate-600',
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  shopping: 'קניות',
+  elderly_care: 'סיוע לקשישים',
+  moving: 'הובלה',
+  repairs: 'תיקונים',
+  pet_care: 'טיפול בחיות',
+  other: 'אחר',
+};
+
 export default function RequestDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -146,7 +164,7 @@ export default function RequestDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-10 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 py-10 px-4 flex items-center justify-center">
         <p className="text-gray-500">טוען</p>
       </div>
     );
@@ -154,14 +172,14 @@ export default function RequestDetail() {
 
   return (!request) ?
     (
-      <div className="min-h-screen bg-gray-50 py-10 px-4 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 py-10 px-4 flex items-center justify-center">
         <p className="text-gray-500">בקשה לא נמצאה</p>
       </div>
 
     ) : (
-      <div className="min-h-screen bg-gray-50 py-10 px-4" dir="rtl">
+      <div className="min-h-screen bg-slate-50 py-10 px-4" dir="rtl">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 sm:p-8">
+          <div className="bg-white rounded-xl shadow-md border border-gray-100 border-t-4 border-t-blue-600 p-6 sm:p-8">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-2xl font-bold text-blue-700">{request.title}</h1>
               <span className={`text-xs px-3 py-1 rounded-full font-medium whitespace-nowrap ${request.urgency === 'high' ? 'bg-red-100 text-red-700' :
@@ -175,7 +193,11 @@ export default function RequestDetail() {
             <p className="text-gray-600 text-sm leading-relaxed mb-6">{request.description}</p>
             <div className="flex flex-wrap gap-4 text-xs text-gray-400 mb-6">
               {request.locationText && <span>📍 {request.locationText}</span>}
-              {request.category && <span>🏷️ {request.category}</span>}
+              {request.category && (
+                <span className={`px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[request.category] ?? 'bg-slate-100 text-slate-600'}`}>
+                  {CATEGORY_LABELS[request.category] ?? request.category}
+                </span>
+              )}
               {request.createdAt && (
                 <span>🕐 {new Date(request.createdAt).toLocaleDateString('he-IL')}</span>
               )}
@@ -192,9 +214,6 @@ export default function RequestDetail() {
                 />
               </div>
             )}
-            {chatError && (
-              <p className="text-sm text-red-600 mb-3 text-center">{chatError}</p>
-            )}
             {user?.id !== request.user.id ? (
               <>
                 {chatError && (
@@ -203,13 +222,13 @@ export default function RequestDetail() {
                 <button
                   onClick={handleHelpClick}
                   disabled={startingChat}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-md transition-colors"
+                  className="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-teal-300 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                 >
                   {startingChat ? 'פותח צ׳אט...' : 'אני אעזור'}
                 </button>
               </>
             ) : (
-              <button onClick={handleDelete} className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-md transition-colors">
+              <button onClick={handleDelete} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
                 מחק
               </button>
             )}

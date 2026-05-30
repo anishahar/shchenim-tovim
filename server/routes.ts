@@ -5,6 +5,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { requestsRouter } from './modules/requests/requests.routes.js';
 import { announcementsRouter } from './modules/announcements/announcements.routes.js';
 import { uploadRouter } from './modules/upload/upload.routes.js';
+import ratingsRouter from './modules/ratings/ratings.routes.js';
 
 
 const router = Router();
@@ -15,6 +16,7 @@ router.use('/requests', requestsRouter);
 router.use('/auth', authRouter);
 router.use('/announcements', announcementsRouter);
 router.use('/upload', uploadRouter);
+router.use('/ratings', ratingsRouter);
 
 // Health check
 router.get('/health', (req, res) => {

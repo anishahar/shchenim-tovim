@@ -43,9 +43,9 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4" dir="rtl">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-slate-100 px-4" dir="rtl">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border-t-4 border-blue-600 p-8">
+        <h1 className="text-3xl font-bold text-center mb-6 text-blue-700">
           התחברות
         </h1>
 
@@ -99,7 +99,7 @@ export default function Login() {
 
         <p className="text-center mt-4 text-sm text-gray-600">
           עדיין אין לך חשבון?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
+          <Link to="/register" className="text-teal-600 hover:text-teal-700 hover:underline font-medium">
             הירשם
           </Link>
         </p>

@@ -7,6 +7,10 @@ export const requestsRouter = Router();
 
 requestsRouter.get('/', authenticateToken, requestController.getRequests);
 
+requestsRouter.get('/my', authenticateToken, requestController.getMyRequests);
+
+requestsRouter.get('/city', authenticateToken, requestController.getByCity);
+
 requestsRouter.get('/:id', authenticateToken, requestController.getRequest);
 
 requestsRouter.post('/', authenticateToken, requestController.newRequest);

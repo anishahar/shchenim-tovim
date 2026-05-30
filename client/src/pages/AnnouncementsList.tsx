@@ -137,6 +137,8 @@ const AnnouncementCard = memo(function AnnouncementCard({
               fontWeight: 800,
               color: '#1f3f8c',
               lineHeight: 1.4,
+              borderRight: '3px solid #0d9488',
+              paddingRight: 10,
             }}
           >
             {title}
@@ -274,7 +276,7 @@ function CreateAnnouncementForm({ isPublishing, onClose, onPublish }: CreateAnno
             disabled={!canPublish}
             style={{
               border: 'none',
-              background: canPublish ? '#1f3f8c' : '#b8c2df',
+              background: canPublish ? '#0d9488' : '#a7d9d5',
               color: '#ffffff',
               padding: '11px 18px',
               borderRadius: 12,
@@ -445,6 +447,7 @@ export default function AnnouncementsList() {
         justifyContent: 'center',
         padding: '24px 16px',
         boxSizing: 'border-box',
+        background: '#f8fafc',
       }}
     >
       <section
@@ -465,6 +468,7 @@ export default function AnnouncementsList() {
             borderRadius: 18,
             padding: 20,
             boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+            borderTop: '4px solid #1f3f8c',
           }}
         >
           <h1
@@ -530,7 +534,7 @@ export default function AnnouncementsList() {
                 aria-controls="create-announcement-form"
                 style={{
                   border: 'none',
-                  background: '#1f3f8c',
+                  background: '#0d9488',
                   color: '#ffffff',
                   padding: '11px 16px',
                   borderRadius: 12,
