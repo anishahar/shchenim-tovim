@@ -86,10 +86,6 @@ class RequestController {
             const { id } = req.params;
             const { status, title, description, category, urgency, latitude, longitude } = req.body;
 
-            if (status === 'completed') {
-                return res.status(400).json({ error: 'Use POST /chats/:id/complete to complete a request' });
-            }
-
             if (!req.user) return res.status(401);
             const userId = req.user.id;
 

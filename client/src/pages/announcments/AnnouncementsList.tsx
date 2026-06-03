@@ -1,7 +1,8 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Announcement } from '@typesLib';
-import api from '../api';
-import { useAuth } from '../AuthContext';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import api from '../../api';
+import { useAuth } from '../../AuthContext';
+import { getInitials } from '../../utils/stringUtils';
 
 type AnnouncementApiResponse = Omit<Announcement, 'createdAt'> & {
   createdAt?: string;
@@ -33,16 +34,6 @@ function formatDate(date: Date): string {
 
 function formatTime(date: Date): string {
   return date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-}
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 function SearchIcon() {
@@ -379,48 +370,48 @@ export default function AnnouncementsList() {
     );
   }, [sortedAnnouncements, search]);
 
- const handlePublish = useCallback(
-  async (title: string, content: string) => {
-    if (!user) return;
+  const handlePublish = useCallback(
+    async (title: string, content: string) => {
+      if (!user) return;
 
-    try {
-      setIsPublishing(true);
-      setError(null);
+      try {
+        setIsPublishing(true);
+        setError(null);
 
-      await api.post('/announcements', {
-        title,
-        content,
-      });
+        await api.post('/announcements', {
+          title,
+          content,
+        });
 
-      await fetchAnnouncements();
+        await fetchAnnouncements();
 
-      setShowCreateForm(false);
+        setShowCreateForm(false);
 
-    } catch (err) {
-      console.error('Failed to publish announcement:', err);
+      } catch (err) {
+        console.error('Failed to publish announcement:', err);
 
-      const responseError =
-        (err as { response?: { data?: { error?: string } } })
-          .response?.data?.error;
+        const responseError =
+          (err as { response?: { data?: { error?: string } } })
+            .response?.data?.error;
 
-      if (responseError === 'house_committee access or higher required') {
-        setError(
-          user.role === 'area_manager' || user.role === 'house_committee'
-            ? 'ההרשאה בטוקן לא מעודכנת. התנתק והתחבר שוב ואז נסה לפרסם מודעה.'
-            : 'רק וועד הבית יכול לפרסם מודעה חדשה'
-        );
-      } else if (responseError) {
-        setError(responseError);
-      } else {
-        setError('לא הצלחנו לפרסם את המודעה');
+        if (responseError === 'house_committee access or higher required') {
+          setError(
+            user.role === 'area_manager' || user.role === 'house_committee'
+              ? 'ההרשאה בטוקן לא מעודכנת. התנתק והתחבר שוב ואז נסה לפרסם מודעה.'
+              : 'רק וועד הבית יכול לפרסם מודעה חדשה'
+          );
+        } else if (responseError) {
+          setError(responseError);
+        } else {
+          setError('לא הצלחנו לפרסם את המודעה');
+        }
+
+      } finally {
+        setIsPublishing(false);
       }
-
-    } finally {
-      setIsPublishing(false);
-    }
-  },
-  [user, fetchAnnouncements],
-);
+    },
+    [user, fetchAnnouncements],
+  );
 
   const handleDelete = useCallback(async (id: number) => {
     if (!confirm('האם אתה בטוח שברצונך למחוק את המודעה?')) return;

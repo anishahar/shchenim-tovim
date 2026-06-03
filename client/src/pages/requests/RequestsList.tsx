@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import api from "../api";
+import api from "../../api";
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../AuthContext";
+import { useAuth } from "../../AuthContext";
 import { Request } from "@typesLib";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  shopping:     'bg-sky-100 text-sky-700',
+  shopping: 'bg-sky-100 text-sky-700',
   elderly_care: 'bg-violet-100 text-violet-700',
-  moving:       'bg-amber-100 text-amber-700',
-  repairs:      'bg-orange-100 text-orange-700',
-  pet_care:     'bg-emerald-100 text-emerald-700',
-  other:        'bg-slate-100 text-slate-600',
+  moving: 'bg-amber-100 text-amber-700',
+  repairs: 'bg-orange-100 text-orange-700',
+  pet_care: 'bg-emerald-100 text-emerald-700',
+  other: 'bg-slate-100 text-slate-600',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -125,7 +125,7 @@ export default function RequestsList() {
       circleRef.current?.setMap(null);
       circleRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapRef.current, center]);
 
   useEffect(() => {

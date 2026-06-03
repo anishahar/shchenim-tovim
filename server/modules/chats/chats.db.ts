@@ -35,7 +35,12 @@ export const GET_USER_CHATS_INFO = `
     END
 
     WHERE 
-        chats.user1_id = $1 OR chats.user2_id = $1
+(chats.user1_id = $1 OR chats.user2_id = $1)
+`;
+
+export const GET_BY_ID = `
+    ${GET_USER_CHATS_INFO}
+    And chats.id = $2
 `;
 
 export const NEW_CHAT = `
@@ -87,10 +92,6 @@ export const GET_UNREAD_MESSAGES_AMOUNT = `
         (c.user2_id = $2 AND m.created_at > c.last_read_at2)
     )
     AND m.sender_id != $2
-`;
-
-export const GET_BY_ID = GET_USER_CHATS_INFO + `
-    And chats.id = $2
 `;
 
 export const REFUSE_HELP = `

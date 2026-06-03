@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import api from '../api';
-import UploadImage from '../components/UploadImage';
+import api from '../../api';
+import UploadImage from '../../components/UploadImage';
 import { useNavigate } from 'react-router-dom';
 
 type CreateRequestData = {

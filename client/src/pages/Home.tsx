@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import api from '../api';
+import { getInitials } from '../utils/stringUtils';
 
 const CATEGORY_COLORS: Record<string, string> = {
-  shopping:     'bg-sky-100 text-sky-700',
+  shopping: 'bg-sky-100 text-sky-700',
   elderly_care: 'bg-violet-100 text-violet-700',
-  moving:       'bg-amber-100 text-amber-700',
-  repairs:      'bg-orange-100 text-orange-700',
-  pet_care:     'bg-emerald-100 text-emerald-700',
-  other:        'bg-slate-100 text-slate-600',
+  moving: 'bg-amber-100 text-amber-700',
+  repairs: 'bg-orange-100 text-orange-700',
+  pet_care: 'bg-emerald-100 text-emerald-700',
+  other: 'bg-slate-100 text-slate-600',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -57,10 +58,6 @@ function getAvatarColor(id: number) {
   return AVATAR_COLORS[id % AVATAR_COLORS.length];
 }
 
-function getInitials(name: string) {
-  return name.trim().split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
-}
-
 export default function Home() {
   const { user } = useAuth();
   const [topUsers, setTopUsers] = useState<TopUser[]>([]);
@@ -71,13 +68,13 @@ export default function Home() {
   useEffect(() => {
     api.get('/ratings/top')
       .then((res) => setTopUsers(res.data))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingUsers(false));
 
     if (user?.city) {
       api.get(`/requests/city?city=${encodeURIComponent(user.city)}`)
         .then((res) => setCityRequests(res.data))
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setLoadingRequests(false));
     } else {
       setLoadingRequests(false);

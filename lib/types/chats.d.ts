@@ -7,7 +7,6 @@ export interface Chat {
     request: Pick<Request, 'id' | 'title' | 'imageUrl' | 'status'> | null;
     otherUser: Pick<User, 'id' | 'name' | 'avatarUrl'>;
     unreadMessagesAmount: number;
-    // lastMessage: string;
     createdAt: Date;
     updatedAt: Date;
     refusedHelpAt: Date | null;
@@ -20,6 +19,10 @@ export interface Message {
     content: string;
     createdAt: Date;
 }
+
+export type ChatWithLastMessage = Chat & {
+    lastMessage?: Message;
+};
 
 export type SocketMessage = Pick<Message, 'chatId' | 'content'>
 

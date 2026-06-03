@@ -1,16 +1,25 @@
 import { Request, Response } from 'express';
 import { pool } from '../../db.js';
+import { requestsService } from '../requests/requests.service.js';
 
 class RatingController {
-    
+
     /**
      * POST /api/ratings
      * Saves a new rating for a user after a completed request.
      */
-    saveRating = async (req: any, res: Response) => {
+    saveRating = async (req: Request, res: Response) => {
         try {
-            const { rated_user_id, request_id, score } = req.body;
-            const rater_user_id = req.user.id; // Extracted from authenticateToken middleware
+            const { ratedUserId, requestId, score } = req.body;
+
+            if (!req.user) return res.sendStatus(401);
+            const userId = req.user.id;
+
+            const request = await requestsService.getRequestByIdForUser(requestId, userId);
+
+            if (request.user.id !== userId) {
+                throw new Error('Only the request owner can rate the helper');
+            }
 
             //  Validation: Ensure the score is within the 1-5 range
             if (!score || score < 1 || score > 5) {
@@ -18,12 +27,12 @@ class RatingController {
             }
 
             //  Validation: Prevent users from rating themselves
-            if (Number(rated_user_id) === Number(rater_user_id)) {
-                    return res.status(400).json({ error: "You cannot rate yourself!" });
+            if (Number(ratedUserId) === Number(userId)) {
+                return res.status(400).json({ error: "You cannot rate yourself!" });
             }
 
             // Validation: Verify that the target user exists in the database
-            const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [rated_user_id]);
+            const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [ratedUserId]);
             if (userCheck.rowCount === 0) {
                 return res.status(404).json({ error: "The user you are trying to rate does not exist" });
             }
@@ -32,22 +41,18 @@ class RatingController {
             const query = `
                 INSERT INTO ratings (rated_user_id, rater_user_id, request_id, score)
                 VALUES ($1, $2, $3, $4)
-                RETURNING *
             `;
-            
-            const result = await pool.query(query, [rated_user_id, rater_user_id, request_id, score]);
 
-            return res.status(201).json({
-                message: "Rating saved successfully",
-                data: result.rows[0]
-            });
+            await pool.query(query, [ratedUserId, userId, requestId, score]);
+
+            return res.sendStatus(201);
 
         } catch (err: any) {
             // Handle unique constraint violation (if a request was already rated)
             if (err.code === '23505') {
                 return res.status(400).json({ error: "This request has already been rated" });
             }
-            
+
             console.error('Error in saveRating:', err);
             return res.status(500).json({ error: "Internal server error while saving rating" });
         }
@@ -69,7 +74,7 @@ class RatingController {
                 FROM ratings
                 WHERE rated_user_id = $1
             `;
-            
+
             const result = await pool.query(query, [userId]);
             const stats = result.rows[0];
 
