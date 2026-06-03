@@ -24,6 +24,7 @@ class RequestsRepository {
                 (
                     GET_BY_ID, [latitude, longitude, requestId]
                 );
+
             return result.rows[0]
         } catch (error) {
             console.error('error in getRequestByIdForUser:', error, 'layer: repository');

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../api";
-import { useAuth } from "../AuthContext";
-import { socket } from "../socket";
+import api from "../../api";
+import { useAuth } from "../../AuthContext";
+import { socket } from "../../socket";
 import { Request } from "@typesLib"
 
 type SocketAck = {
@@ -21,12 +21,12 @@ type ChatApiResponse = {
 const HELP_MESSAGE = "היי, אני אעזור";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  shopping:     'bg-sky-100 text-sky-700',
+  shopping: 'bg-sky-100 text-sky-700',
   elderly_care: 'bg-violet-100 text-violet-700',
-  moving:       'bg-amber-100 text-amber-700',
-  repairs:      'bg-orange-100 text-orange-700',
-  pet_care:     'bg-emerald-100 text-emerald-700',
-  other:        'bg-slate-100 text-slate-600',
+  moving: 'bg-amber-100 text-amber-700',
+  repairs: 'bg-orange-100 text-orange-700',
+  pet_care: 'bg-emerald-100 text-emerald-700',
+  other: 'bg-slate-100 text-slate-600',
 };
 
 const CATEGORY_LABELS: Record<string, string> = {

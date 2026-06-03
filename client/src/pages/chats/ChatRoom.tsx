@@ -1,11 +1,14 @@
-import { memo, type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
+import { REQUEST_STATUS_OPTIONS, STATUS_LABELS, URGENCY_LABELS } from "@constantsLib";
+import type { Chat, Message, RequestStatus, RequestUrgency } from '@typesLib';
+import { memo, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
-import api from '../api';
-import { socket } from '../socket';
-import type { Chat, Message, RequestStatus } from '@typesLib';
+import { useAuth } from '../../AuthContext';
+import api from '../../api';
+import { Avatar } from '../../components/Avatar';
+import { RatingModal } from '../../components/Ratings';
+import { socket } from '../../socket';
+import { formatMessageTime } from "../../utils/stringUtils";
 
-const AVATAR_COLORS = ['#01696f', '#437a22', '#7a39bb', '#da7101', '#006494', '#a13544'] as const;
 const CHAT_META_REFRESH_INTERVAL_MS = 5000;
 
 type MessageApiResponse = Omit<Message, 'createdAt'> & {
@@ -40,22 +43,10 @@ type RequestDetailsResponse = {
   urgency: string;
 };
 
-const URGENCY_LABELS: Record<string, string> = {
-  high: 'דחיפות גבוהה',
-  medium: 'דחיפות בינונית',
-  low: 'דחיפות נמוכה',
-};
-
 const URGENCY_STYLES: Record<string, { background: string; color: string }> = {
-  high:   { background: 'rgba(220,38,38,0.10)',  color: '#dc2626' },
-  medium: { background: 'rgba(217,119,6,0.10)',  color: '#b45309' },
-  low:    { background: 'rgba(22,163,74,0.10)',   color: '#16a34a' },
-};
-
-const STATUS_LABELS: Record<RequestStatus, string> = {
-  open: 'פתוחה',
-  in_progress: 'בטיפול',
-  completed: 'הושלמה',
+  high: { background: 'rgba(220,38,38,0.10)', color: '#dc2626' },
+  medium: { background: 'rgba(217,119,6,0.10)', color: '#b45309' },
+  low: { background: 'rgba(22,163,74,0.10)', color: '#16a34a' },
 };
 
 const STATUS_STYLES: Record<RequestStatus, CSSProperties> = {
@@ -64,31 +55,8 @@ const STATUS_STYLES: Record<RequestStatus, CSSProperties> = {
   completed: { background: 'rgba(67,122,34,0.12)', color: '#437a22' },
 };
 
-const REQUEST_STATUS_OPTIONS: RequestStatus[] = ['open', 'in_progress', 'completed'];
-
 function isValidChatId(chatId: number): boolean {
   return Number.isFinite(chatId) && chatId > 0;
-}
-
-function getAvatarColor(id: number): string {
-  return AVATAR_COLORS[id % AVATAR_COLORS.length];
-}
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(' ')
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function formatMessageTime(date: Date): string {
-  return date.toLocaleTimeString('he-IL', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 function normalizeMessage(message: MessageApiResponse): Message {
@@ -115,56 +83,6 @@ function normalizeChatMeta(chat: ChatApiResponse): ChatMeta {
     request: chat.request,
     refusedHelpAt: chat.refusedHelpAt ? new Date(chat.refusedHelpAt) : null,
   };
-}
-
-function Avatar({
-  name,
-  url,
-  userId,
-  size = 50,
-}: {
-  name: string;
-  url?: string;
-  userId: number;
-  size?: number;
-}) {
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt={name}
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          objectFit: 'cover',
-          flexShrink: 0,
-        }}
-      />
-    );
-  }
-
-  return (
-    <div
-      aria-hidden
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: getAvatarColor(userId),
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontWeight: 700,
-        fontSize: 14,
-        userSelect: 'none',
-        flexShrink: 0,
-      }}
-    >
-      {getInitials(name)}
-    </div>
-  );
 }
 
 const MessageBubble = memo(function MessageBubble({
@@ -257,88 +175,6 @@ function SystemNotice({ text, date }: { text: string; date?: Date | null }) {
   );
 }
 
-function RatingModal({
-  helperName,
-  onSubmit,
-  isSubmitting,
-}: {
-  helperName: string;
-  onSubmit: (score: number) => void;
-  isSubmitting: boolean;
-}) {
-  const [hovered, setHovered] = useState(0);
-  const [selected, setSelected] = useState(0);
-  const display = hovered || selected;
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-      }}
-    >
-      <div dir="rtl" style={{
-        background: '#fff', borderRadius: 18, padding: '32px 28px',
-        maxWidth: 360, width: '90%', textAlign: 'center',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.18)',
-      }}>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1f3f8c', marginBottom: 8 }}>
-          דרג את {helperName}
-        </h2>
-        <p style={{ fontSize: 14, color: '#7a7974', marginBottom: 24 }}>
-          כיצד הייתה חוויית העזרה שלך?
-        </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
-          {[1, 2, 3, 4, 5].map((star) => (
-            <button
-              key={star}
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => setSelected(star)}
-              onMouseEnter={() => setHovered(star)}
-              onMouseLeave={() => setHovered(0)}
-              style={{
-                background: 'none', border: 'none',
-                cursor: isSubmitting ? 'wait' : 'pointer', fontSize: 36,
-                color: star <= display ? '#f5a623' : '#d1cfc9',
-                transition: 'color 0.1s', padding: 0,
-              }}
-            >★</button>
-          ))}
-        </div>
-        <button
-          type="button"
-          disabled={selected === 0 || isSubmitting}
-          onClick={() => onSubmit(selected)}
-          style={{
-            width: '100%', background: selected > 0 ? '#1f3f8c' : '#d1cfc9',
-            color: '#fff', border: 'none', borderRadius: 999, padding: '12px 0',
-            fontSize: 15, fontWeight: 800,
-            cursor: selected > 0 && !isSubmitting ? 'pointer' : 'not-allowed',
-            marginBottom: 10,
-          }}
-        >
-          {isSubmitting ? 'שומר...' : 'שמור דירוג'}
-        </button>
-        <button
-          type="button"
-          disabled={isSubmitting}
-          onClick={() => onSubmit(0)}
-          style={{
-            background: 'none', border: 'none', color: '#7a7974',
-            fontSize: 13, cursor: isSubmitting ? 'wait' : 'pointer',
-            textDecoration: 'underline',
-          }}
-        >
-          דלג, לא עכשיו
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function ChatRoom() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -353,7 +189,7 @@ export default function ChatRoom() {
   const [isSocketConnected, setIsSocketConnected] = useState(socket.connected);
   const [chatMeta, setChatMeta] = useState<ChatMeta | null>(null);
   const [requestOwnerId, setRequestOwnerId] = useState<number | null>(null);
-  const [requestSnippet, setRequestSnippet] = useState<{ description: string; urgency: string; category: string } | null>(null);
+  const [requestSnippet, setRequestSnippet] = useState<{ description: string; urgency: RequestUrgency; category: string } | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
@@ -390,7 +226,7 @@ export default function ChatRoom() {
         setRequestOwnerId(requestResponse.data.user.id);
         setRequestSnippet({
           description: requestResponse.data.description,
-          urgency: requestResponse.data.urgency,
+          urgency: requestResponse.data.urgency as RequestUrgency,
           category: requestResponse.data.category,
         });
       } catch (err) {
@@ -558,7 +394,8 @@ export default function ChatRoom() {
     if (!chatMeta?.request) return;
     try {
       setIsSubmittingRating(true);
-      await api.post(`/chats/${chatId}/complete`, { score });
+      await api.patch(`/requests/${chatMeta.request.id}`, { status: 'completed' });
+      score && await api.post(`/ratings`, { ratedUserId: chatMeta.otherUser.id, requestId: chatMeta.request.id, score });
       navigate('/chats');
     } catch (err) {
       console.error('Failed to complete request:', err);
@@ -587,12 +424,12 @@ export default function ChatRoom() {
       setChatMeta((prev) =>
         prev?.request
           ? {
-              ...prev,
-              request: {
-                ...prev.request,
-                status: nextStatus,
-              },
-            }
+            ...prev,
+            request: {
+              ...prev.request,
+              status: nextStatus,
+            },
+          }
           : prev
       );
     } catch (err) {
@@ -612,8 +449,8 @@ export default function ChatRoom() {
 
     try {
       setIsUpdatingStatus(true);
+      await api.patch(`/chats/${chatMeta.id}/refuse-help`);
       await api.patch(`/requests/${chatMeta.request.id}`, { status: 'open' });
-      await api.delete(`/chats/${chatId}`);
       navigate('/chats');
     } catch (err) {
       console.error('Failed to reject request:', err);
@@ -628,8 +465,20 @@ export default function ChatRoom() {
   const otherUserName = chatMeta?.otherUser.name ?? `צ׳אט ${chatId}`;
   const headerLabel = chatMeta?.request ? `${otherUserName} - ${headerTitle}` : otherUserName;
   const canChangeStatus = !!chatMeta?.request && requestOwnerId === user?.id;
-  const showRefusedHelpNotice =
-    !!chatMeta?.request && !!chatMeta.refusedHelpAt && requestOwnerId !== user?.id;
+
+  const items = [
+    ...messages.map((message) => ({
+      type: 'message' as const,
+      date: message.createdAt,
+      message,
+    })),
+    ...(chatMeta?.refusedHelpAt
+      ? [{
+        type: 'notice' as const,
+        date: chatMeta.refusedHelpAt,
+      }]
+      : []),
+  ].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   return (
     <div
@@ -870,26 +719,26 @@ export default function ChatRoom() {
             <div style={{ textAlign: 'center', color: '#a13544' }}>{error}</div>
           ) : (
             <>
-              {showRefusedHelpNotice && (
-                <SystemNotice
-                  text={`${otherUserName} סירב לעזרה`}
-                  date={chatMeta?.refusedHelpAt}
-                />
-              )}
 
-              {messages.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#7a7974' }}>
-                  עדיין אין הודעות בשיחה הזאת
-                </div>
-              ) : (
-                messages.map((message) => (
+              {items.map((item) => {
+                if (item.type === 'notice') {
+                  return (
+                    <SystemNotice
+                      key={`notice-${item.date.getTime()}`}
+                      text={`${otherUserName} סירב לעזרה`}
+                      date={item.date}
+                    />
+                  );
+                }
+
+                return (
                   <MessageBubble
-                    key={`${message.id}-${message.createdAt.getTime()}`}
-                    message={message}
-                    isOwn={message.senderId === user?.id}
+                    key={`${item.message.id}-${item.message.createdAt.getTime()}`}
+                    message={item.message}
+                    isOwn={item.message.senderId === user?.id}
                   />
-                ))
-              )}
+                );
+              })}
             </>
           )}
 

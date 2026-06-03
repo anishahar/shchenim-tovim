@@ -1,19 +1,19 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './AuthContext';
 import Navbar from './components/Navbar';
 
 // Import all pages
+import AdminDashboard from './pages/AdminDashboard';
+import AnnouncementsList from './pages/announcments/AnnouncementsList';
+import ChatList from './pages/chats/ChatList';
+import ChatRoom from './pages/chats/ChatRoom';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import RequestsList from './pages/RequestsList';
-import CreateRequest from './pages/CreateRequest';
-import RequestDetail from './pages/RequestDetail';
-import ChatList from './pages/ChatList';
-import ChatRoom from './pages/ChatRoom';
-import AnnouncementsList from './pages/AnnouncementsList';
 import Profile from './pages/Profile';
-import AdminDashboard from './pages/AdminDashboard';
+import Register from './pages/Register';
+import CreateRequest from './pages/requests/CreateRequest';
+import RequestDetail from './pages/requests/RequestDetail';
+import RequestsList from './pages/requests/RequestsList';
 
 // Protected Route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
