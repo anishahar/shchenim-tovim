@@ -116,12 +116,6 @@ export default function RequestDetail() {
 
       const existingChat = await findRequestChat(requestId);
       if (existingChat) {
-        if (existingChat.request?.status !== 'in_progress') {
-          setChatError('הצ׳אט כבר קיים, אבל השרת עדיין לא סימן את הבקשה כבטיפול');
-          setStartingChat(false);
-          return;
-        }
-
         navigate(`/chats/${existingChat.id}`);
         return;
       }
