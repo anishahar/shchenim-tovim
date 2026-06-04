@@ -17,6 +17,8 @@ export const ChatItem = memo(function ChatItem({ chat, isSelected, onClick, sent
     const { otherUser, request, updatedAt, lastMessage, unreadMessagesAmount } = chat;
     const hasUnread = unreadMessagesAmount > 0;
 
+    const headerTitle = request ? otherUser.name + " - " + request.title : otherUser.name;
+
     function handleKeyDown(e: React.KeyboardEvent) {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -66,7 +68,7 @@ export const ChatItem = memo(function ChatItem({ chat, isSelected, onClick, sent
                             textOverflow: 'ellipsis',
                         }}
                     >
-                        {otherUser.name}
+                        {headerTitle}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         {hasUnread && (

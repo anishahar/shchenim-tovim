@@ -538,12 +538,12 @@ export default function ChatRoom() {
             ←
           </button>
 
-          <Avatar
+          {chatMeta && <Avatar
             name={otherUserName}
-            url={chatMeta?.otherUser.avatarUrl}
-            userId={chatMeta?.otherUser.id ?? (chatId || 1)}
+            url={chatMeta.otherUser.avatarUrl}
+            userId={chatMeta.otherUser.id}
             size={50}
-          />
+          />}
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
