@@ -49,8 +49,6 @@ export default function RequestDetail() {
   //const navigate = useNavigate();
 
   const { user } = useAuth();
-  console.log("Current user id:", user?.id);
-  console.log("Current user name:", user?.name);
 
   //Delete request
   function handleDelete() {

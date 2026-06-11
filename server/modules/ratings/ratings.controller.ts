@@ -18,7 +18,7 @@ class RatingController {
             const request = await requestsService.getRequestByIdForUser(requestId, userId);
 
             if (request.user.id !== userId) {
-                throw new Error('Only the request owner can rate the helper');
+                return res.status(403).json({ error: 'Only the request owner can rate the helper' });
             }
 
             //  Validation: Ensure the score is within the 1-5 range

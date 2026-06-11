@@ -26,7 +26,7 @@ class ChatsController {
         if (error) return res.status(400).json({ errors: error })
         const chatId = data.params.id;
 
-        if (!req.user) return res.status(401);
+        if (!req.user) return res.sendStatus(401);
         const userId = req.user.id;
 
         try {
@@ -46,7 +46,7 @@ class ChatsController {
         if (error) return res.status(400).json({ errors: error });
         const chatId = data.params.id;
 
-        if (!req.user) return res.status(401);
+        if (!req.user) return res.sendStatus(401);
         const userId = req.user.id;
 
         try {
@@ -62,7 +62,7 @@ class ChatsController {
 
     deleteChat = async (req: Request, res: Response) => {
         const chatId = Number(req.params.id);
-        if (!req.user) return res.status(401);
+        if (!req.user) return res.sendStatus(401);
         const userId = req.user.id;
 
         try {
@@ -81,7 +81,7 @@ class ChatsController {
         if (error) return res.status(400).json({ errors: error });
         const chatId = data.params.id;
 
-        if (!req.user) return res.status(401);
+        if (!req.user) return res.sendStatus(401);
         const userId = req.user.id;
 
         try {

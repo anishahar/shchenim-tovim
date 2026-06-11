@@ -18,7 +18,7 @@ class RequestController {
             if (error) return res.status(400).json({ errors: error });
             const { radius } = data.query;
 
-            if (!req.user) return res.status(401);
+            if (!req.user) return res.sendStatus(401);
             const userId = req.user.id;
 
             const requests = await requestsService.getRequests(userId, radius)
@@ -42,7 +42,7 @@ class RequestController {
             if (error) return res.status(400).json({ errors: error });
             const { title, description, category, urgency, locationText, imageUrl, latitude, longitude } = data.body;
 
-            if (!req.user) return res.status(401);
+            if (!req.user) return res.sendStatus(401);
             const userId = req.user.id;
 
             const result = await pool.query(
@@ -68,7 +68,7 @@ class RequestController {
 
             const { id } = data.params;
 
-            if (!req.user) return res.status(401);
+            if (!req.user) return res.sendStatus(401);
             const userId = req.user.id;
 
             const request = await requestsService.getRequestByIdForUser(id, userId);
@@ -86,7 +86,7 @@ class RequestController {
             const { id } = req.params;
             const { status, title, description, category, urgency, latitude, longitude } = req.body;
 
-            if (!req.user) return res.status(401);
+            if (!req.user) return res.sendStatus(401);
             const userId = req.user.id;
 
             // Check if request exists and belongs to the user
@@ -124,7 +124,7 @@ class RequestController {
 
             const { id } = data.params;
 
-            if (!req.user) return res.status(401);
+            if (!req.user) return res.sendStatus(401);
             const userId = req.user.id;
 
             const check = await pool.query('SELECT user_id FROM requests WHERE id = $1', [id]);
