@@ -68,9 +68,8 @@ shchenim-tovim/
 ## Prerequisites
 
 - **Node.js** v18+
-- A **PostgreSQL** database. The project is configured for [Neon](https://neon.tech) (free tier available). You can also use any standard PostgreSQL instance by setting `DATABASE_URL` accordingly.
-- A **Cloudinary** account (free tier) for image uploads.
-- A **Google Maps API key** with the *Maps JavaScript API* and *Geocoding API* enabled, for the map view and address autocomplete.
+
+That's it. All environment variables (database, API keys) are already committed to the repo. No additional accounts or configuration are needed.
 
 ---
 
@@ -88,35 +87,20 @@ cd client && npm install && cd ..
 cd server && npm install && cd ..
 ```
 
-### 2. Configure environment variables
+### 2. Environment variables
 
-**Server** — copy the example and fill in your values:
+Both `server/.env` and `client/.env` are included in the repository. No setup required.
 
-```bash
-cp server/.env.example server/.env
-```
+For reference, the variables in use:
 
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Port the server listens on (default `3001`) |
-| `NODE_ENV` | `development` or `production` |
-| `DATABASE_URL` | PostgreSQL connection string (`postgresql://user:pass@host/db?sslmode=require`) |
-| `JWT_SECRET` | Any long random string used to sign tokens |
-| `CLOUDINARY_CLOUD_NAME` | From your Cloudinary dashboard |
-| `CLOUDINARY_API_KEY` | From your Cloudinary dashboard |
-| `CLOUDINARY_API_SECRET` | From your Cloudinary dashboard |
-| `CLIENT_URL` | URL of the running client, used for CORS (default `http://localhost:5173`) |
-
-**Client** — copy the example and fill in your values:
-
-```bash
-cp client/.env.example client/.env
-```
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_URL` | Full URL of the API (default `http://localhost:3001/api`) |
-| `VITE_SERVER_URL` | Base URL of the server for Socket.IO (default `http://localhost:3001`) |
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Neon (serverless Postgres) — hosted and ready |
+| `JWT_SECRET` | Included |
+| `CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET` | Included — used for image uploads |
+| `VITE_API_URL` | `http://localhost:3001/api` |
+| `VITE_SERVER_URL` | `http://localhost:3001` |
+| `VITE_GOOGLE_MAPS_KEY` | Included — used for the map view |
 | `VITE_GOOGLE_MAPS_KEY` | Your Google Maps JavaScript API key |
 
 ### 3. Database — automatic schema creation
@@ -142,14 +126,9 @@ npm run dev:server   # tsx watch at http://localhost:3001
 
 ---
 
-## Does the professor need to set up their own database?
+## Database
 
-**Yes** — the app reads `DATABASE_URL` from `server/.env` which is not committed to the repository (it is gitignored for security). To run the app you must:
-
-1. Create a free database on [Neon](https://neon.tech) (or use any PostgreSQL instance).
-2. Copy `server/.env.example` to `server/.env` and fill in the connection string and the other keys listed above.
-
-The schema (all tables and indexes) is created automatically on first start — no manual SQL needed.
+No setup needed. The app connects to a hosted Neon (serverless Postgres) database whose credentials are included in `server/.env`. The schema (all tables and indexes) is created automatically on first start via `CREATE TABLE IF NOT EXISTS`.
 
 ---
 
